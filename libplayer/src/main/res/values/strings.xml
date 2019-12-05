@@ -1,0 +1,5 @@
+<resources>
+    <string name="player_app_name">libplayer</string>
+    <string name="player_enter_player">进入视频预览界面</string>
+    <string name="player_start_record_video">录制视频</string>
+</resources>
