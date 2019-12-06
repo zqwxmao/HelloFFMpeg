@@ -11,6 +11,7 @@ extern "C" {
     #include <libavcodec/avcodec.h>
     #include <libavformat/avformat.h>
     #include <libavutil/time.h>
+    #include <libavutil/opt.h>
 }
 
 #define logw(content)   __android_log_write(ANDROID_LOG_WARN,"zqwx",content)
@@ -80,6 +81,7 @@ int ffmpeg_publish_using_packet(const char *rtmpURL, const char *filePath) {
     }
     logw("avformat_alloc_output_context2 success!");
 
+
     /**
      * 配置输出流
      * AVIOcontext *pb  IO上下文
@@ -93,7 +95,18 @@ int ffmpeg_publish_using_packet(const char *rtmpURL, const char *filePath) {
      * AVCodecContext *codec
      * 遍历输入的AVStream
      */
-    for (int i = 0; i < ictx->nb_streams; ++i) {
+//    ictx -> probesize /= 3;
+//    ictx -> max_analyze_duration /= 3;
+
+    
+    int i;
+    for (i = 0; i < ictx->nb_streams; ++i) {
+        // AV_CODEC_FLAG_GLOBAL_HEADER  -- 将全局头文件放在引渡文件中，而不是每个关键帧中。
+        //AV_CODEC_FLAG_LOW_DELAY  --较低延迟
+        ictx -> streams[i] -> codec -> flags |= AV_CODEC_FLAG_GLOBAL_HEADER | AV_CODEC_FLAG_LOW_DELAY;;
+//        ictx -> streams[i] -> codec -> max_b_frames = 0;
+        //实时推流，零延迟
+        av_opt_set(ictx -> streams[i] -> codec ->priv_data, "tune", "zerolatency", 0);
         //创建一个新的流到octx中
         AVStream *out = avformat_new_stream(octx, avcodec_find_decoder(ictx -> streams[i] -> codecpar -> codec_id));
         if(!out) {
@@ -110,6 +123,16 @@ int ffmpeg_publish_using_packet(const char *rtmpURL, const char *filePath) {
             //goto end;
         }
         out -> codecpar -> codec_tag = 0;
+
+    }
+
+    int videoIndex;
+    //输入流数据的数量循环
+    for (i = 0; i < ictx -> nb_streams; ++i) {
+        if(ictx -> streams[i] -> codecpar -> codec_type == AVMEDIA_TYPE_VIDEO) {
+            videoIndex = i;
+            break;
+        }
     }
 
     av_dump_format(octx, 0, rtmpURL, 1);
@@ -150,23 +173,77 @@ int ffmpeg_publish_using_packet(const char *rtmpURL, const char *filePath) {
     AVPacket avPacket;
     //获取当前的时间戳 微妙
     long long startTime = av_gettime();
+    long long frame_index = 0;
+
     while (true) {
+        //输入、输出视频流
+        AVStream *in_stream, *out_stream;
         ret = av_read_frame(ictx, &avPacket);
         if(ret < 0) {
+            LOGD("read frame failure ret : %i",ret);
             break;
         }
-        LOGD("AVPacket.pts : %i", avPacket.pts);
+        LOGD("AVPacket.pts : %lld", avPacket.pts);
+
+        /**
+         * PTS （Presentation Time Stamp）显示播放时间
+         * DTS （Decoding Time Stamp）解码时间
+         */
+        //没有显示时间（比如未解码的H.264）
+        if(avPacket.pts == AV_NOPTS_VALUE) {
+            //AVRational time_base:时基。通过该值可以把PTS、DTS转化为真正的时间。
+            AVRational time_base1 = ictx -> streams[videoIndex] -> time_base;
+
+            /**
+             * 计算两帧之间的时间
+             * r_frame_rate 基流帧速率
+             * av_q2d 转化为double型
+             */
+            int64_t calc_duration = (double) AV_TIME_BASE / av_q2d(ictx -> streams[videoIndex] -> r_frame_rate);
+
+            //配置参数
+            avPacket.pts = (double) (frame_index * calc_duration) / (double) (av_q2d(time_base1) * AV_TIME_BASE);
+            avPacket.dts = avPacket.pts;
+            avPacket.duration = (double) calc_duration / (double) (av_q2d(time_base1) * AV_TIME_BASE);
+        }
+
+        //延时
+        if(avPacket.stream_index == videoIndex) {
+            AVRational time_base = ictx -> streams[videoIndex] -> time_base;
+            AVRational time_base_q = {1, AV_TIME_BASE};
+            //计算视频播放时间
+            int64_t pts_time = av_rescale_q(avPacket.dts, time_base, time_base_q);
+            //计算实际视频的播放时间
+            int64_t now_time = av_gettime() - startTime;
+            AVRational avr = ictx -> streams[videoIndex] -> time_base;
+            LOGD("avr.num : %i, avr.den : %i, , avPacket.dts : %lld, , avPacket.pts : %lld, , pts_time : %lld, ", avr.num, avr.den, avPacket.dts, avPacket.pts, pts_time);
+            if(pts_time > now_time) {
+                //睡眠一段时间（目的是让当前视频记录的播放时间与实际时间同步）
+                av_usleep((unsigned int)(pts_time - now_time));
+            }
+        }
+
+        in_stream = ictx -> streams[avPacket.stream_index];
+        out_stream = octx -> streams[avPacket.stream_index];
+
+        //计算延时后，重新指定时间戳
+
         //计算转换时间戳 pts dts
         //获取时间基数
-        AVRational itime = ictx -> streams[avPacket.stream_index] -> time_base;
-        AVRational otime = octx -> streams[avPacket.stream_index] -> time_base;
-        avPacket.pts = av_rescale_q_rnd(avPacket.pts, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_NEAR_INF));
-        avPacket.dts = av_rescale_q_rnd(avPacket.pts, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_NEAR_INF));
+        AVRational itime = in_stream -> time_base;
+        AVRational otime = out_stream -> time_base;
+        avPacket.pts = av_rescale_q_rnd(avPacket.pts, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
+        avPacket.dts = av_rescale_q_rnd(avPacket.dts, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
         //到这一帧时间经历了多长时间
-        avPacket.duration = av_rescale_q_rnd(avPacket.duration, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_NEAR_INF));
+        avPacket.duration = (int)av_rescale_q(avPacket.duration, itime, otime);
         avPacket.pos = -1;
 
-        //视频帧推送速度
+        if(avPacket.stream_index == videoIndex) {
+            LOGD("Send %lld video frames to output URL", frame_index);
+            frame_index++;
+        }
+
+        /*//视频帧推送速度
         if(ictx -> streams[avPacket.stream_index] -> codecpar -> codec_type == AVMEDIA_TYPE_VIDEO) {
             AVRational tb = ictx -> streams[avPacket.stream_index] -> time_base;
             //已经过去的时间
@@ -178,11 +255,12 @@ int ffmpeg_publish_using_packet(const char *rtmpURL, const char *filePath) {
             } else {
                 logw("not sleep!");
             }
-        }
+        }*/
 
         //推送会自动释放空间 不需要调用av_packet_unref
         ret = av_interleaved_write_frame(octx, &avPacket);
         if(ret < 0) {
+            LOGD("write frame failure ret : %i",ret);
             break;
         }
 
@@ -203,6 +281,11 @@ int ffmpeg_publish_using_packet(const char *rtmpURL, const char *filePath) {
     //关闭输入上下文
     if (ictx != NULL)
         avformat_close_input(&ictx);
+
+
+//    av_free_packet(&avPacket);
+    av_packet_unref(&avPacket);
+
     octx = NULL;
     ictx = NULL;
 
