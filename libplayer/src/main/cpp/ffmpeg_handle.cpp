@@ -268,10 +268,8 @@ int ffmpeg_publish_using_packet(const char *rtmpURL, const char *filePath) {
         //if (avPacket.stream_index == 0)
         //  av_usleep(30 * 1000);
         //释放空间。内部指向的视频空间和音频空间
-        //av_packet_unref(&avPacket);
+        av_packet_unref(&avPacket);
     }
-
-    end:
 
     if (octx != NULL)
         avio_close(octx->pb);
@@ -281,10 +279,6 @@ int ffmpeg_publish_using_packet(const char *rtmpURL, const char *filePath) {
     //关闭输入上下文
     if (ictx != NULL)
         avformat_close_input(&ictx);
-
-
-//    av_free_packet(&avPacket);
-    av_packet_unref(&avPacket);
 
     octx = NULL;
     ictx = NULL;

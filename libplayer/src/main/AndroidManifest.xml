@@ -10,14 +10,17 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application>
-
-        <activity android:name=".activity.PlayerFFMPegPushFileActivity"
-            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
-            android:launchMode="singleTop"/>
+        <activity android:name=".activity.PlayerVideoViewActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"></activity>
+        <activity
+            android:name=".activity.PlayerFFMPegPushFileActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
         <activity
             android:name=".activity.PlayerMainActivity"
-            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
-            android:launchMode="singleTop">
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -30,7 +33,7 @@
             android:screenOrientation="landscape" />
         <activity
             android:name=".activity.PlayerWelcomeActivity"
-            android:launchMode="singleTop"></activity>
+            android:launchMode="singleTop" />
     </application>
 
 </manifest>
