@@ -16,7 +16,7 @@ public class PlayerMainActivity extends AppCompatActivity {
     private final String[] titles = {
       "1.使用FFMPeg推流视频文件到流媒体服务器",
       "2.使用VideoView拉流视频流文件播放",
-      "",
+      "3.使用MediaCodec硬编码/FFMpeg推流",
       "",
       "",
       "",
@@ -40,7 +40,10 @@ public class PlayerMainActivity extends AppCompatActivity {
                         startActivity(PlayerFFMPegPushFileActivity.class);
                         break;
                     case 1:
-                        startActivity(PlayerVideoViewActivity.class);
+                        startActivity(PlayerIjkVideoViewActivity.class);
+                        break;
+                    case 2:
+                        startActivity(PlayerCameraRecordMuxerActivity.class);
                         break;
                 }
             }

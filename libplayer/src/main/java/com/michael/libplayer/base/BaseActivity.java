@@ -1,12 +1,13 @@
-package com.michael.libplayer.base.activity;
+package com.michael.libplayer.base;
 
 import android.annotation.TargetApi;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 
@@ -21,7 +22,9 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getSupportActionBar().hide();
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
         setTranslucentStatus();
 
         //设置标题栏
@@ -52,11 +55,6 @@ public abstract class BaseActivity extends AppCompatActivity {
         }
     }
 
-    protected void startActivity(Class clazz) {
-        Intent intent = new Intent(this, clazz);
-        startActivity(intent);
-    }
-
     public enum ActionBarType {
         NONE,
         DEFAULT,
@@ -85,5 +83,26 @@ public abstract class BaseActivity extends AppCompatActivity {
 
     protected int getStatusBarColor(){
         return  R.color.player_background_half_black;
+    }
+
+    protected void startActivity(Class clazz) {
+        Intent intent = new Intent(this, clazz);
+        startActivity(intent);
+    }
+
+    public static void startActivity(Context context, Class clazz, Intent extIntent) {
+        Intent intent;
+        if (extIntent != null) {
+            intent = extIntent.cloneFilter();
+            intent.setComponent(new ComponentName(context, clazz));
+        } else {
+            intent = new Intent(context, clazz);
+        }
+        context.startActivity(intent);
+    }
+
+    public static void startActivity(Context context, Class clazz) {
+        Intent intent = new Intent(context, clazz);
+        context.startActivity(intent);
     }
 }

@@ -15,7 +15,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.michael.libplayer.R;
-import com.michael.libplayer.base.activity.BaseActivity;
+import com.michael.libplayer.base.BaseActivity;
 import com.michael.libplayer.media.util.CameraRecorder;
 import com.michael.libplayer.opengl.filter.GroupFilter;
 import com.michael.libplayer.opengl.filter.WaterMarkFilter;

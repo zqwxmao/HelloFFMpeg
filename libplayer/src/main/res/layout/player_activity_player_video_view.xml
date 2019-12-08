@@ -4,11 +4,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".activity.PlayerVideoViewActivity">
+    tools:context=".activity.PlayerIjkVideoViewActivity">
 
-    <VideoView
+    <com.michael.libplayer.view.IjkPlayerView
         android:id="@+id/vv_play"
         app:layout_constraintTop_toTopOf="parent"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="match_parent" />
 </android.support.constraint.ConstraintLayout>

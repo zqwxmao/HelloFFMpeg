@@ -5,7 +5,7 @@ import android.view.View;
 import android.widget.Button;
 
 import com.michael.libplayer.R;
-import com.michael.libplayer.base.activity.BaseActivity;
+import com.michael.libplayer.base.BaseActivity;
 
 public class PlayerWelcomeActivity extends BaseActivity implements View.OnClickListener {
 
@@ -27,7 +27,7 @@ public class PlayerWelcomeActivity extends BaseActivity implements View.OnClickL
     @Override
     public void onClick(View v) {
         if (v.getId() == R.id.btn_enter_preview) {
-            startActivity(PlayerPreviewActivity.class);
+            startActivity(this, PlayerPreviewActivity.class);
         }
     }
 }
