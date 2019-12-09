@@ -10,6 +10,7 @@ import com.michael.libplayer.util.FileUtils;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Vector;
 
@@ -36,7 +37,7 @@ public class MediaMuxerThread extends Thread {
     private Vector<MuxerData> muxerDatas;
     private FileUtils fileSwapHelper;
     private VideoEncoderThread videoEncoderThread;
-    private AudioEncoderThread audioEncoderThread;
+    private AudioEncoderThreadOrigin audioEncoderThread;
 
     private MediaMuxerThread(){}
 
@@ -76,6 +77,7 @@ public class MediaMuxerThread extends Thread {
         muxerDatas.clear();
 
         mediaMuxer = new MediaMuxer(filePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+        Log.e(TAG, "mediaMuxer init : "+mediaMuxer);
         if (audioEncoderThread != null) {
             audioEncoderThread.setMuxerReady(true);
         }
@@ -114,11 +116,14 @@ public class MediaMuxerThread extends Thread {
      * @param mediaFormat
      */
     public synchronized void addTrackIndex(int index, MediaFormat mediaFormat) {
+        Log.e(TAG, "添加音视频轨 判断是否已添加 addTrackIndex index "+index+" ! curThread : "+ Thread.currentThread());
         if (isMuxerTrackAddDone()) {
+            Log.e(TAG, "添加音视频轨 判断是否已添加 isMuxerTrackAddDone : "+isMuxerTrackAddDone());
             return;
         }
         //如果已经添加了音视频轨就不做处理了
         if ((index == TRACK_VIDEO && isVideoTrackAdd()) || (index == TRACK_AUDIO && isAudioTrackAdd())) {
+            Log.e(TAG, "添加音视频轨 判断是否已添加 isVideoTrackAdd : "+isVideoTrackAdd()+", isAudioTrackAdd : " + isAudioTrackAdd());
             return;
         }
         if (mediaMuxer != null) {
@@ -139,11 +144,13 @@ public class MediaMuxerThread extends Thread {
                 Log.e(TAG, "添加音频轨完成");
             }
             requestStart();
+            Log.e(TAG, "addTrackIndex requestStart END");
         }
     }
 
     private void requestStart() {
         synchronized (lock) {
+            Log.e(TAG, "requestStart 启动混合器.. : "+isAudioTrackAdd+", "+isVideoTrackAdd);
             if (isMuxerTrackAddDone()) {
                 mediaMuxer.start();
                 Log.e(TAG, "requestStart 启动混合器..开始等待数据输入...");
@@ -171,7 +178,7 @@ public class MediaMuxerThread extends Thread {
     private void initMuxer() {
         muxerDatas = new Vector<>();
         fileSwapHelper = new FileUtils();
-        audioEncoderThread = new AudioEncoderThread(new WeakReference<>(this));
+        audioEncoderThread = new AudioEncoderThreadOrigin(new WeakReference<>(this));
         videoEncoderThread = new VideoEncoderThread(VideoEncoderThread.IMAGE_WIDTH, VideoEncoderThread.IMAGE_HEIGHT, new WeakReference<>(this));
         audioEncoderThread.start();
         videoEncoderThread.start();
@@ -213,7 +220,7 @@ public class MediaMuxerThread extends Thread {
                         } else {
                             track = audioTrackIndex;
                         }
-                        Log.e(TAG, "写入混合数据 "+data.bufferInfo.size);
+                        Log.e(TAG, "写入混合数据 "+data.bufferInfo.size+", muxer : "+mediaMuxer);
                         try {
                             mediaMuxer.writeSampleData(track, data.byteBuffer, data.bufferInfo);
                         } catch (Exception e) {
@@ -232,9 +239,9 @@ public class MediaMuxerThread extends Thread {
                     }
                 }
             }
-            readyStop();
-            Log.e(TAG, "混合器退出。。。");
         }
+        readyStop();
+        Log.e(TAG, "混合器退出。。。");
     }
 
     private void restart() {
@@ -260,9 +267,12 @@ public class MediaMuxerThread extends Thread {
     private void readyStop() {
         if (mediaMuxer != null) {
             try {
+                Field field = mediaMuxer.getClass().getDeclaredField("mState");
+                field.setAccessible(true);
+                Log.e(TAG, "mediaMuxer stop 状态 ： "+field.get(mediaMuxer));
                 mediaMuxer.stop();
             } catch (Exception e) {
-                Log.e(TAG, "mediaMuxer stop 异常 ： "+e.getMessage());
+                Log.e(TAG, "mediaMuxer stop 异常 ： "+e.getMessage()+", "+e.getCause());
             }
             try {
                 mediaMuxer.release();

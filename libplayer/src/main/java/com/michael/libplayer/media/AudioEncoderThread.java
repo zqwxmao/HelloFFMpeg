@@ -26,10 +26,11 @@ public class AudioEncoderThread extends Thread {
     private static final int TIMEOUT_USEC = 10000;
     private static final String MIME_TYPE = MediaFormat.MIMETYPE_AUDIO_AAC;
     /**
-     * 采样率，现在能够保证在所有设备上使用的采样率是44100Hz, 但是其他的采样率（22050, 16000, 11025）在一些设备上也可以使用。
-     */
+     * 采样率，现在能够保证在所有设备上使用的采样率是44100Hz, 但是其他的采样率（22050, 16000, 11025）在一些设备上也可以使用。*/
+
     private static final int SAMPLE_RATE = 44100;
     private static final int BIT_RATE = 64000;
+    private static final int CHANNEL_COUNT = 1;
     private static final int[] AUDIO_SOURCES = new int[]{MediaRecorder.AudioSource.DEFAULT};
 
     private final Object lock = new Object();
@@ -47,20 +48,6 @@ public class AudioEncoderThread extends Thread {
         this.mediaMuxerRunnable = reference;
         this.bufferInfo = new MediaCodec.BufferInfo();
         prepare();
-    }
-
-    private void prepare() {
-        MediaCodecInfo audioCodecInfo = selectAudioCodec(MIME_TYPE);
-        if (audioCodecInfo == null) {
-            Log.e(TAG, "Unable to find an appropriate codec for "+MIME_TYPE);
-            return;
-        }
-        Log.i(TAG, "selected audio codec : "+audioCodecInfo.getName());
-        audioFormat = MediaFormat.createAudioFormat(MIME_TYPE, SAMPLE_RATE, 1);
-        audioFormat.setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE);
-        audioFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 2);
-        audioFormat.setInteger(MediaFormat.KEY_SAMPLE_RATE, SAMPLE_RATE);
-        Log.i(TAG, "audio formate : "+audioFormat);
     }
 
     private MediaCodecInfo selectAudioCodec(final String mimeType) {
@@ -85,7 +72,25 @@ public class AudioEncoderThread extends Thread {
         return result;
     }
 
+    private void prepare() {
+        MediaCodecInfo audioCodecInfo = selectAudioCodec(MIME_TYPE);
+        if (audioCodecInfo == null) {
+            Log.e(TAG, "Unable to find an appropriate codec for "+MIME_TYPE);
+            return;
+        }
+        Log.i(TAG, "selected audio codec : "+audioCodecInfo.getName());
+        audioFormat = MediaFormat.createAudioFormat(MIME_TYPE, SAMPLE_RATE, CHANNEL_COUNT);
+        audioFormat.setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE);
+        audioFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, CHANNEL_COUNT);
+        audioFormat.setInteger(MediaFormat.KEY_SAMPLE_RATE, SAMPLE_RATE);
+//        audioFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
+        Log.i(TAG, "audio formate : "+audioFormat);
+    }
+
     private void startMediaCodec() throws IOException {
+        if (this.audioCodec != null) {
+            return;
+        }
         audioCodec = MediaCodec.createEncoderByType(MIME_TYPE);
         audioCodec.configure(audioFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         audioCodec.start();
@@ -99,10 +104,10 @@ public class AudioEncoderThread extends Thread {
             audioRecord.stop();
             audioRecord.release();
             audioRecord = null;
-        }
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+            }
         }
         if (audioCodec != null) {
             audioCodec.stop();
@@ -120,7 +125,9 @@ public class AudioEncoderThread extends Thread {
         }
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
         try {
-            final int minBufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+            final int minBufferSize = AudioRecord.getMinBufferSize(
+					SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, 
+					AudioFormat.ENCODING_PCM_16BIT);
             int bufferSize = SAMPLES_PER_FRAME * FRAMES_PER_BUFFER;
             if (bufferSize < minBufferSize) {
                 bufferSize = ((minBufferSize / SAMPLES_PER_FRAME) + 1) * SAMPLES_PER_FRAME * 2;
@@ -220,10 +227,12 @@ public class AudioEncoderThread extends Thread {
 
     private void encode(final ByteBuffer byteBuffer, final int length, final long presentationTimeUs) {
         if (isExit) return;
-        final ByteBuffer[] inputBuffers = audioCodec.getInputBuffers();
+        Log.e(TAG, "发送音频数据 1");
         final int inputBufferIndex = audioCodec.dequeueInputBuffer(TIMEOUT_USEC);
         //向编码器输入数据
+        Log.e(TAG, "发送音频数据 2");
         if (inputBufferIndex >= 0) {
+            final ByteBuffer[] inputBuffers = audioCodec.getInputBuffers();
             final ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
             inputBuffer.clear();
             if (byteBuffer != null) {
@@ -239,6 +248,7 @@ public class AudioEncoderThread extends Thread {
             // nothing to do here because MediaCodec#dequeueInputBuffer(TIMEOUT_USEC)
             // will wait for maximum TIMEOUT_USEC(10msec) on each call
         }
+        Log.e(TAG, "发送音频数据 3");
 
         //获取解码后的数据
         final MediaMuxerThread muxer = mediaMuxerRunnable.get();
@@ -246,20 +256,26 @@ public class AudioEncoderThread extends Thread {
             Log.i(TAG, "MediaMuxerRunnable is unexpectedly null");
             return;
         }
+        Log.e(TAG, "发送音频数据 4");
         ByteBuffer[] encoderOutputBuffers = audioCodec.getOutputBuffers();
         int encoderStatus;
 
+        encoderStatus = audioCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
+        Log.e(TAG, "发送音频数据 5");
         do {
-            encoderStatus = audioCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
+            Log.e(TAG, "发送音频数据 5 encoderStatus : "+encoderStatus);
             if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
             } else if (encoderStatus == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                 encoderOutputBuffers = audioCodec.getOutputBuffers();
             } else if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 final MediaFormat format = audioCodec.getOutputFormat(); // API >= 16
                 MediaMuxerThread mediaMuxerRunnable = this.mediaMuxerRunnable.get();
+                Log.e(TAG, "添加音轨 INFO_OUTPUT_FORMAT_CHANGED  mediaMuxerRunnable : "+mediaMuxerRunnable);
                 if (mediaMuxerRunnable == null) {
                     Log.e(TAG, "添加音轨 INFO_OUTPUT_FORMAT_CHANGED : "+format.toString());
                     mediaMuxerRunnable.addTrackIndex(MediaMuxerThread.TRACK_AUDIO, format);
+                    Log.e(TAG, "添加音轨 INFO_OUTPUT_FORMAT_CHANGED DONE !!!");
+
                 }
             } else if (encoderStatus < 0) {
                 Log.e(TAG, "encoderStatus < 0");
@@ -270,6 +286,13 @@ public class AudioEncoderThread extends Thread {
                 }
 
                 if (bufferInfo.size != 0 && muxer != null && muxer.isMuxerTrackAddDone()) {
+                    MediaMuxerThread mediaMuxer = this.mediaMuxerRunnable.get();
+
+                    if (mediaMuxer != null && !mediaMuxer.isMuxerTrackAddDone()) {
+                        MediaFormat newFormat = audioCodec.getOutputFormat();
+                        mediaMuxer.addTrackIndex(MediaMuxerThread.TRACK_VIDEO, newFormat);
+                    }
+
                     bufferInfo.presentationTimeUs = getPTSUs();
                     Log.e(TAG, "发送音频数据 "+bufferInfo.size);
                     muxer.addMuxerData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_AUDIO, encodedData, bufferInfo));
@@ -278,13 +301,14 @@ public class AudioEncoderThread extends Thread {
                 audioCodec.releaseOutputBuffer(encoderStatus, false);
             }
         } while (encoderStatus >= 0);
+        Log.e(TAG, "发送音频数据 6");
     }
 
     /**
      * get next encoding presentationTimeUs
      *
-     * @return
-     */
+     * @return*/
+
     private long getPTSUs() {
         long result = System.nanoTime() / 1000L;
         // presentationTimeUs should be monotonic

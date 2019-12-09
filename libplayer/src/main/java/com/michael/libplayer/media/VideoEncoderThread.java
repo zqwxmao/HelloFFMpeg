@@ -21,7 +21,7 @@ public class VideoEncoderThread extends Thread {
 
     //编码相关参数
     private static final String MIME_TYPE = MediaFormat.MIMETYPE_VIDEO_AVC;     //H.264 Advanced Video
-    private static final int FRAME_RATE = 25;       //帧率
+    private static final int FRAME_RATE = 30;       //帧率
     private static final int IFRAME_INTERVAL = 10;      //I帧间隔(GOP)
     private static final int TIMEOUT_USEC = 10000;      //编码超时时间
     private static final int COMPRESS_RATIO = 256;
@@ -64,11 +64,17 @@ public class VideoEncoderThread extends Thread {
             Log.e(TAG, "unable to find an appropriate codec for " + MIME_TYPE);
             return;
         }
+        int colorFormats[] = codecInfo.getCapabilitiesForType(MIME_TYPE).colorFormats;
+        for (int format : colorFormats) {
+            Log.i(TAG, "color format : "+format);
+        }
         Log.i(TAG, "selected video codec : "+codecInfo.getName());
         mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, width, height);
-        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE);
+        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, width * height * 5);
+        // 调整码率的控流模式
+//        mediaFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
-        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
+        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
         mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL);
         Log.i(TAG, "video formate : "+mediaFormat);
     }
@@ -173,6 +179,7 @@ public class VideoEncoderThread extends Thread {
                 }
             }
         }
+        Log.i(TAG, "Video record thread exit");
     }
 
     /**
@@ -183,11 +190,10 @@ public class VideoEncoderThread extends Thread {
         Log.i(TAG, "encodeFrame");
 
         NV21toI420SemiPlanar(input, frameData, this.width, this.height);
-        ByteBuffer[] inputBuffers = videoCodec.getInputBuffers();
-        ByteBuffer[] outputBuffers = videoCodec.getOutputBuffers();
 
         int inputBufferIndex = videoCodec.dequeueInputBuffer(TIMEOUT_USEC);
         if (inputBufferIndex >= 0) {
+            ByteBuffer[] inputBuffers = videoCodec.getInputBuffers();
             ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
             inputBuffer.clear();
             inputBuffer.put(frameData);
@@ -197,6 +203,8 @@ public class VideoEncoderThread extends Thread {
         }
 
         int outputBufferIndex = videoCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
+        Log.e(TAG, "发送视频数据 outputBufferIndex : "+outputBufferIndex);
+        ByteBuffer[] outputBuffers = videoCodec.getOutputBuffers();
         do {
             if (outputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
             } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
