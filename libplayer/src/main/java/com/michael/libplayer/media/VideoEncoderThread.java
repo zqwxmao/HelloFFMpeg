@@ -66,8 +66,8 @@ public class VideoEncoderThread extends Thread {
         }
         Log.i(TAG, "selected video codec : "+codecInfo.getName());
         mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, width, height);
-//        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, width * height * 5);
-        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, IMAGE_HEIGHT * IMAGE_WIDTH * 3 * 8 * FRAME_RATE / COMPRESS_RATIO);
+        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, width * height * 5);
+//        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, IMAGE_HEIGHT * IMAGE_WIDTH * 3 * 8 * FRAME_RATE / COMPRESS_RATIO);
         // 调整码率的控流模式
 //        mediaFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
