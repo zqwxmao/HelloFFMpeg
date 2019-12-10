@@ -89,10 +89,19 @@ public class PlayerCameraRecordMuxerActivity extends BaseActivity implements Sur
         for (int i = 0; i < length; i++) {
             Log.e("zqwx", "SupportedPreviewSizes : " + previewSizes.get(i).width + "x" + previewSizes.get(i).height);
         }
-        if (length > 0) {
-            VideoEncoderThread.IMAGE_WIDTH = previewSizes.get(0).width;
-            VideoEncoderThread.IMAGE_HEIGHT = previewSizes.get(0).height;
+        Log.e("zqwx", "surfaceView : " + surfaceView.getWidth()+", height : "+surfaceView.getHeight());
+        /*if (length > 0) {
+            if (length > 1) {
+                boolean first = previewSizes.get(0).width > previewSizes.get(length-1).width;
+                VideoEncoderThread.IMAGE_WIDTH = first ? previewSizes.get(0).width : previewSizes.get(length-1).width;
+                VideoEncoderThread.IMAGE_HEIGHT = first ? previewSizes.get(0).height : previewSizes.get(length-1).height;
+            } else {
+                VideoEncoderThread.IMAGE_WIDTH = previewSizes.get(0).width;
+                VideoEncoderThread.IMAGE_HEIGHT = previewSizes.get(0).height;
+            }
         }
+        VideoEncoderThread.IMAGE_WIDTH = surfaceView.getHeight();
+        VideoEncoderThread.IMAGE_HEIGHT = surfaceView.getWidth();*/
         //这个宽高的设置和后面编解码设置一样， 否则不能正常处理
         parameters.setPreviewSize(VideoEncoderThread.IMAGE_WIDTH, VideoEncoderThread.IMAGE_HEIGHT);
 

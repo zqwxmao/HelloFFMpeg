@@ -37,7 +37,7 @@ public class MediaMuxerThread extends Thread {
     private Vector<MuxerData> muxerDatas;
     private FileUtils fileSwapHelper;
     private VideoEncoderThread videoEncoderThread;
-    private AudioEncoderThreadOrigin audioEncoderThread;
+    private AudioEncoderThread audioEncoderThread;
 
     private MediaMuxerThread(){}
 
@@ -178,7 +178,7 @@ public class MediaMuxerThread extends Thread {
     private void initMuxer() {
         muxerDatas = new Vector<>();
         fileSwapHelper = new FileUtils();
-        audioEncoderThread = new AudioEncoderThreadOrigin(new WeakReference<>(this));
+        audioEncoderThread = new AudioEncoderThread(new WeakReference<>(this));
         videoEncoderThread = new VideoEncoderThread(VideoEncoderThread.IMAGE_WIDTH, VideoEncoderThread.IMAGE_HEIGHT, new WeakReference<>(this));
         audioEncoderThread.start();
         videoEncoderThread.start();

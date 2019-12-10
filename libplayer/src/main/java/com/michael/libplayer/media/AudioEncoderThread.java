@@ -227,10 +227,8 @@ public class AudioEncoderThread extends Thread {
 
     private void encode(final ByteBuffer byteBuffer, final int length, final long presentationTimeUs) {
         if (isExit) return;
-        Log.e(TAG, "发送音频数据 1");
         final int inputBufferIndex = audioCodec.dequeueInputBuffer(TIMEOUT_USEC);
         //向编码器输入数据
-        Log.e(TAG, "发送音频数据 2");
         if (inputBufferIndex >= 0) {
             final ByteBuffer[] inputBuffers = audioCodec.getInputBuffers();
             final ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
@@ -248,7 +246,6 @@ public class AudioEncoderThread extends Thread {
             // nothing to do here because MediaCodec#dequeueInputBuffer(TIMEOUT_USEC)
             // will wait for maximum TIMEOUT_USEC(10msec) on each call
         }
-        Log.e(TAG, "发送音频数据 3");
 
         //获取解码后的数据
         final MediaMuxerThread muxer = mediaMuxerRunnable.get();
@@ -256,13 +253,11 @@ public class AudioEncoderThread extends Thread {
             Log.i(TAG, "MediaMuxerRunnable is unexpectedly null");
             return;
         }
-        Log.e(TAG, "发送音频数据 4");
         ByteBuffer[] encoderOutputBuffers = audioCodec.getOutputBuffers();
         int encoderStatus;
 
-        encoderStatus = audioCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
-        Log.e(TAG, "发送音频数据 5");
         do {
+            encoderStatus = audioCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
             Log.e(TAG, "发送音频数据 5 encoderStatus : "+encoderStatus);
             if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
             } else if (encoderStatus == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
@@ -271,7 +266,7 @@ public class AudioEncoderThread extends Thread {
                 final MediaFormat format = audioCodec.getOutputFormat(); // API >= 16
                 MediaMuxerThread mediaMuxerRunnable = this.mediaMuxerRunnable.get();
                 Log.e(TAG, "添加音轨 INFO_OUTPUT_FORMAT_CHANGED  mediaMuxerRunnable : "+mediaMuxerRunnable);
-                if (mediaMuxerRunnable == null) {
+                if (mediaMuxerRunnable != null) {
                     Log.e(TAG, "添加音轨 INFO_OUTPUT_FORMAT_CHANGED : "+format.toString());
                     mediaMuxerRunnable.addTrackIndex(MediaMuxerThread.TRACK_AUDIO, format);
                     Log.e(TAG, "添加音轨 INFO_OUTPUT_FORMAT_CHANGED DONE !!!");
@@ -286,12 +281,12 @@ public class AudioEncoderThread extends Thread {
                 }
 
                 if (bufferInfo.size != 0 && muxer != null && muxer.isMuxerTrackAddDone()) {
-                    MediaMuxerThread mediaMuxer = this.mediaMuxerRunnable.get();
+                    /*MediaMuxerThread mediaMuxer = this.mediaMuxerRunnable.get();
 
                     if (mediaMuxer != null && !mediaMuxer.isMuxerTrackAddDone()) {
                         MediaFormat newFormat = audioCodec.getOutputFormat();
                         mediaMuxer.addTrackIndex(MediaMuxerThread.TRACK_VIDEO, newFormat);
-                    }
+                    }*/
 
                     bufferInfo.presentationTimeUs = getPTSUs();
                     Log.e(TAG, "发送音频数据 "+bufferInfo.size);

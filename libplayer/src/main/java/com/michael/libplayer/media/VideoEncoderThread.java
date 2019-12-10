@@ -16,8 +16,8 @@ import java.util.Vector;
 public class VideoEncoderThread extends Thread {
 
     private static final String TAG = PlayerCameraRecordMuxerActivity.TAG + VideoEncoderThread.class.getSimpleName();
-    public static int IMAGE_HEIGHT = 1080;
-    public static int IMAGE_WIDTH = 1920;
+    public static int IMAGE_HEIGHT = 720;
+    public static int IMAGE_WIDTH = 1280;
 
     //编码相关参数
     private static final String MIME_TYPE = MediaFormat.MIMETYPE_VIDEO_AVC;     //H.264 Advanced Video
@@ -64,10 +64,6 @@ public class VideoEncoderThread extends Thread {
             Log.e(TAG, "unable to find an appropriate codec for " + MIME_TYPE);
             return;
         }
-        int colorFormats[] = codecInfo.getCapabilitiesForType(MIME_TYPE).colorFormats;
-        for (int format : colorFormats) {
-            Log.i(TAG, "color format : "+format);
-        }
         Log.i(TAG, "selected video codec : "+codecInfo.getName());
         mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, width, height);
 //        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, width * height * 5);
@@ -75,10 +71,35 @@ public class VideoEncoderThread extends Thread {
         // 调整码率的控流模式
 //        mediaFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
-        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
+        int colorFormat = getColorFormat();
+        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, colorFormat);
 //        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
         mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL);
         Log.i(TAG, "video formate : "+mediaFormat);
+    }
+
+    private int getColorFormat() {
+        int colorFormats[] = codecInfo.getCapabilitiesForType(MIME_TYPE).colorFormats;
+        int colorFormat = 0;
+
+        outer :
+        for (int i = 0; i < colorFormats.length; i++) {
+            int format = colorFormats[i];
+            switch (format) {
+                case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar:
+                    Log.d(TAG, "supported color format COLOR_FormatYUV420Planar:" + format);
+                    colorFormat = format;
+                    break outer;
+                case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar:
+                    Log.d(TAG, "supported color format COLOR_FormatYUV420SemiPlanar:" + format);
+                    colorFormat = format;
+                    break outer;
+
+                default:
+                    Log.d(TAG, "other color format " + format);
+            }
+        }
+        return colorFormat;
     }
 
     private MediaCodecInfo selectCodec(String mimeType) {
@@ -177,6 +198,7 @@ public class VideoEncoderThread extends Thread {
                 try {
                     encodeFrame(bytes);
                 } catch (Exception e) {
+                    Log.e(TAG, "解码视频数据出错： "+e.getMessage());
                     e.printStackTrace();
                 }
             }
@@ -191,9 +213,10 @@ public class VideoEncoderThread extends Thread {
     private void encodeFrame(byte[] input) {
         Log.i(TAG, "encodeFrame");
 
-        NV21toI420SemiPlanar(input, frameData, this.width, this.height);
+        NV21ToNV12(input, frameData, this.width, this.height);
 
         int inputBufferIndex = videoCodec.dequeueInputBuffer(TIMEOUT_USEC);
+        Log.i(TAG, "encodeFrame inputBufferIndex : "+inputBufferIndex);
         if (inputBufferIndex >= 0) {
             ByteBuffer[] inputBuffers = videoCodec.getInputBuffers();
             ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
@@ -204,10 +227,11 @@ public class VideoEncoderThread extends Thread {
 
         }
 
-        int outputBufferIndex = videoCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
-        Log.e(TAG, "发送视频数据 outputBufferIndex : "+outputBufferIndex);
+        int outputBufferIndex;
         ByteBuffer[] outputBuffers = videoCodec.getOutputBuffers();
         do {
+            outputBufferIndex = videoCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
+            Log.e(TAG, "发送视频数据 outputBufferIndex : "+outputBufferIndex);
             if (outputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
             } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                 outputBuffers = videoCodec.getOutputBuffers();
@@ -230,10 +254,10 @@ public class VideoEncoderThread extends Thread {
                 if (bufferInfo.size != 0) {
                     MediaMuxerThread mediaMuxer = this.mediaMuxer.get();
 
-                    if (mediaMuxer != null && !mediaMuxer.isMuxerTrackAddDone()) {
+                    /*if (mediaMuxer != null && !mediaMuxer.isMuxerTrackAddDone()) {
                         MediaFormat newFormat = videoCodec.getOutputFormat();
                         mediaMuxer.addTrackIndex(MediaMuxerThread.TRACK_VIDEO, newFormat);
-                    }
+                    }*/
                     //adjust the ByteBuffer values to match BufferInfo
                     outputBuffer.position(bufferInfo.offset);
                     outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
@@ -247,13 +271,34 @@ public class VideoEncoderThread extends Thread {
                 videoCodec.releaseOutputBuffer(outputBufferIndex, false);
             }
         } while (outputBufferIndex >= 0);
+        Log.i(TAG, "encodeFrame END ! ");
     }
 
     private static void NV21toI420SemiPlanar(byte[] nv21bytes, byte[] i420bytes, int width, int height) {
         System.arraycopy(nv21bytes, 0, i420bytes, 0, width * height);
-        /*for (int i = width * height; i < nv21bytes.length; i += 2) {
+        for (int i = width * height; i < nv21bytes.length; i += 2) {
             i420bytes[i] = nv21bytes[i + 1];
             i420bytes[i + 1] = nv21bytes[i];
-        }*/
+        }
+    }
+
+    private void NV21ToNV12(byte[] nv21,byte[] nv12,int width,int height){
+        if(nv21 == null || nv12 == null) {
+            return;
+        }
+        int framesize = width*height;
+        int i = 0,j = 0;
+        System.arraycopy(nv21, 0, nv12, 0, framesize);
+        for(i = 0; i < framesize; i++){
+            nv12[i] = nv21[i];
+        }
+        for (j = 0; j < framesize/2; j+=2)
+        {
+            nv12[framesize + j-1] = nv21[j+framesize];
+        }
+        for (j = 0; j < framesize/2; j+=2)
+        {
+            nv12[framesize + j] = nv21[j+framesize-1];
+        }
     }
 }
