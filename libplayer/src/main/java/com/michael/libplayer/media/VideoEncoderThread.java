@@ -70,11 +70,13 @@ public class VideoEncoderThread extends Thread {
         }
         Log.i(TAG, "selected video codec : "+codecInfo.getName());
         mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, width, height);
-        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, width * height * 5);
+//        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, width * height * 5);
+        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, IMAGE_HEIGHT * IMAGE_WIDTH * 3 * 8 * FRAME_RATE / COMPRESS_RATIO);
         // 调整码率的控流模式
 //        mediaFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
-        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
+        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
+//        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
         mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL);
         Log.i(TAG, "video formate : "+mediaFormat);
     }
@@ -249,9 +251,9 @@ public class VideoEncoderThread extends Thread {
 
     private static void NV21toI420SemiPlanar(byte[] nv21bytes, byte[] i420bytes, int width, int height) {
         System.arraycopy(nv21bytes, 0, i420bytes, 0, width * height);
-        for (int i = width * height; i < nv21bytes.length; i += 2) {
+        /*for (int i = width * height; i < nv21bytes.length; i += 2) {
             i420bytes[i] = nv21bytes[i + 1];
             i420bytes[i + 1] = nv21bytes[i];
-        }
+        }*/
     }
 }
