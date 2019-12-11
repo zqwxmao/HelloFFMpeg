@@ -4,6 +4,7 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.media.MediaFormat;
+import android.os.Build;
 import android.util.Log;
 
 import com.michael.libplayer.activity.PlayerCameraRecordMuxerActivity;
@@ -194,7 +195,7 @@ public class VideoEncoderThread extends Thread {
                 }
             } else if (!frameBytes.isEmpty()) {
                 byte[] bytes = this.frameBytes.remove(0);
-                Log.e(TAG, "解码视频数据： "+bytes.length);
+                Log.e(TAG, "解码视频数据： "+ (bytes!=null ? bytes.length : "null"));
                 try {
                     encodeFrame(bytes);
                 } catch (Exception e) {
@@ -213,7 +214,14 @@ public class VideoEncoderThread extends Thread {
     private void encodeFrame(byte[] input) {
         Log.i(TAG, "encodeFrame");
 
-        NV21ToNV12(input, frameData, this.width, this.height);
+        switch (mediaFormat.getInteger(MediaFormat.KEY_COLOR_FORMAT)) {
+            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar:
+                NV21ToYU12(input, frameData, this.width, this.height);
+                break;
+            case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar:
+                NV21toI420SemiPlanar(input, frameData, this.width, this.height);
+                break;
+        }
 
         int inputBufferIndex = videoCodec.dequeueInputBuffer(TIMEOUT_USEC);
         Log.i(TAG, "encodeFrame inputBufferIndex : "+inputBufferIndex);
@@ -244,23 +252,34 @@ public class VideoEncoderThread extends Thread {
             } else if (outputBufferIndex < 0) {
 
             } else {
-                ByteBuffer outputBuffer = outputBuffers[outputBufferIndex];
+                if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                    videoCodec.releaseOutputBuffer(outputBufferIndex,false);
+                    break;
+                }
+
+                ByteBuffer outputBuffer;
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                    outputBuffer = videoCodec.getOutputBuffers()[outputBufferIndex];
+                } else {
+                    outputBuffer = videoCodec.getOutputBuffer(outputBufferIndex);
+                }
                 if (outputBuffer == null) {
-                    throw new RuntimeException("encoderOutputBuffer "+outputBufferIndex + "was null ");
+                    Log.e(TAG, "encoderOutputBuffer "+outputBufferIndex + "was null ");
+                    continue;
                 }
                 if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
+                    MediaFormat format = videoCodec.getOutputFormat();
+                    format.setByteBuffer("csd-0",outputBuffer);
                     bufferInfo.size = 0;
                 }
                 if (bufferInfo.size != 0) {
                     MediaMuxerThread mediaMuxer = this.mediaMuxer.get();
 
-                    /*if (mediaMuxer != null && !mediaMuxer.isMuxerTrackAddDone()) {
-                        MediaFormat newFormat = videoCodec.getOutputFormat();
-                        mediaMuxer.addTrackIndex(MediaMuxerThread.TRACK_VIDEO, newFormat);
-                    }*/
-                    //adjust the ByteBuffer values to match BufferInfo
-                    outputBuffer.position(bufferInfo.offset);
-                    outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
+                    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.KITKAT) {
+                        //adjust the ByteBuffer values to match BufferInfo
+                        outputBuffer.position(bufferInfo.offset);
+                        outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
+                    }
 
                     if (mediaMuxer != null && mediaMuxer.isMuxerTrackAddDone()) {
                         mediaMuxer.addMuxerData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, outputBuffer, bufferInfo));
@@ -274,7 +293,19 @@ public class VideoEncoderThread extends Thread {
         Log.i(TAG, "encodeFrame END ! ");
     }
 
-    private static void NV21toI420SemiPlanar(byte[] nv21bytes, byte[] i420bytes, int width, int height) {
+    /**
+     * Y Y Y Y
+     * Y Y Y Y
+     * Y Y Y Y
+     * Y Y Y Y
+     * U V U V
+     * U V U V
+     * @param nv21bytes
+     * @param i420bytes
+     * @param width
+     * @param height
+     */
+    private void NV21toI420SemiPlanar(byte[] nv21bytes, byte[] i420bytes, int width, int height) {
         System.arraycopy(nv21bytes, 0, i420bytes, 0, width * height);
         for (int i = width * height; i < nv21bytes.length; i += 2) {
             i420bytes[i] = nv21bytes[i + 1];
@@ -282,23 +313,29 @@ public class VideoEncoderThread extends Thread {
         }
     }
 
-    private void NV21ToNV12(byte[] nv21,byte[] nv12,int width,int height){
-        if(nv21 == null || nv12 == null) {
+    /**
+     * COLOR_FormatYUV420Planar / I420 / YU12
+     * Y Y Y Y
+     * Y Y Y Y
+     * Y Y Y Y
+     * Y Y Y Y
+     * U U U U
+     * V V V V
+     * @param nv21
+     * @param yu12
+     * @param width
+     * @param height
+     */
+    private void NV21ToYU12(byte[] nv21, byte[] yu12, int width, int height){
+        if(nv21 == null || yu12 == null) {
             return;
         }
-        int framesize = width*height;
-        int i = 0,j = 0;
-        System.arraycopy(nv21, 0, nv12, 0, framesize);
-        for(i = 0; i < framesize; i++){
-            nv12[i] = nv21[i];
-        }
-        for (j = 0; j < framesize/2; j+=2)
-        {
-            nv12[framesize + j-1] = nv21[j+framesize];
-        }
-        for (j = 0; j < framesize/2; j+=2)
-        {
-            nv12[framesize + j] = nv21[j+framesize-1];
+        int frameSize = width * height;
+        System.arraycopy(nv21, 0, yu12, 0, frameSize);
+        int len = frameSize / 4;
+        for (int i = 0; i < len; i++ ) {
+            yu12[i + frameSize] = nv21[i * 2 + frameSize + 1];
+            yu12[i + len + frameSize] = nv21[i * 2 + frameSize];
         }
     }
 }

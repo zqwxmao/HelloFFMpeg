@@ -180,7 +180,7 @@ public class AudioEncoderThread extends Thread {
             if (!isStart) {
                 stopMediaCodec();
 
-                Log.e(TAG, Thread.currentThread().getId() + " audio - - run... "+isMuxerReady);
+                Log.e(TAG, Thread.currentThread().getId() + " audio - - run...isMuxerReady :  "+isMuxerReady);
 
                 if (!isMuxerReady) {
                     synchronized (lock) {
@@ -258,7 +258,7 @@ public class AudioEncoderThread extends Thread {
 
         do {
             encoderStatus = audioCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
-            Log.e(TAG, "发送音频数据 5 encoderStatus : "+encoderStatus);
+            Log.e(TAG, "发送音频数据 encoderStatus : "+encoderStatus);
             if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
             } else if (encoderStatus == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                 encoderOutputBuffers = audioCodec.getOutputBuffers();
@@ -269,7 +269,6 @@ public class AudioEncoderThread extends Thread {
                 if (mediaMuxerRunnable != null) {
                     Log.e(TAG, "添加音轨 INFO_OUTPUT_FORMAT_CHANGED : "+format.toString());
                     mediaMuxerRunnable.addTrackIndex(MediaMuxerThread.TRACK_AUDIO, format);
-                    Log.e(TAG, "添加音轨 INFO_OUTPUT_FORMAT_CHANGED DONE !!!");
 
                 }
             } else if (encoderStatus < 0) {
@@ -281,22 +280,14 @@ public class AudioEncoderThread extends Thread {
                 }
 
                 if (bufferInfo.size != 0 && muxer != null && muxer.isMuxerTrackAddDone()) {
-                    /*MediaMuxerThread mediaMuxer = this.mediaMuxerRunnable.get();
-
-                    if (mediaMuxer != null && !mediaMuxer.isMuxerTrackAddDone()) {
-                        MediaFormat newFormat = audioCodec.getOutputFormat();
-                        mediaMuxer.addTrackIndex(MediaMuxerThread.TRACK_VIDEO, newFormat);
-                    }*/
-
                     bufferInfo.presentationTimeUs = getPTSUs();
-                    Log.e(TAG, "发送音频数据 "+bufferInfo.size);
+                    Log.e(TAG, "发送音频数据 bufferInfo.size : "+bufferInfo.size);
                     muxer.addMuxerData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_AUDIO, encodedData, bufferInfo));
                     prevOutputPTSUs = bufferInfo.presentationTimeUs;
                 }
                 audioCodec.releaseOutputBuffer(encoderStatus, false);
             }
         } while (encoderStatus >= 0);
-        Log.e(TAG, "发送音频数据 6");
     }
 
     /**

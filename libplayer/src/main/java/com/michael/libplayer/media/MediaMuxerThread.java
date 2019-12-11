@@ -144,7 +144,6 @@ public class MediaMuxerThread extends Thread {
                 Log.e(TAG, "添加音频轨完成");
             }
             requestStart();
-            Log.e(TAG, "addTrackIndex requestStart END");
         }
     }
 
@@ -220,7 +219,7 @@ public class MediaMuxerThread extends Thread {
                         } else {
                             track = audioTrackIndex;
                         }
-                        Log.e(TAG, "写入混合数据 "+data.bufferInfo.size+", muxer : "+mediaMuxer);
+                        Log.e(TAG, "写入混合数据 "+data.bufferInfo.size);
                         try {
                             mediaMuxer.writeSampleData(track, data.byteBuffer, data.bufferInfo);
                         } catch (Exception e) {
