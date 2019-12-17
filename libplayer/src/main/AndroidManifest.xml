@@ -12,13 +12,21 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application>
-        <activity android:name=".activity.PlayerCameraRecordMuxerActivity"
+        <activity android:name=".activity.PlayerGLSurfaceViewPreviewActivity"
             android:launchMode="singleTop"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"></activity>
-        <activity android:name=".activity.PlayerIjkVideoViewActivity"
+        <activity android:name=".activity.PlayerOpenGLPreviewActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"></activity>
+        <activity
+            android:name=".activity.PlayerCameraRecordMuxerActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
+        <activity
+            android:name=".activity.PlayerIjkVideoViewActivity"
             android:launchMode="singleTop"
             android:screenOrientation="landscape"
-            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"></activity>
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
         <activity
             android:name=".activity.PlayerFFMPegPushFileActivity"
             android:launchMode="singleTop"

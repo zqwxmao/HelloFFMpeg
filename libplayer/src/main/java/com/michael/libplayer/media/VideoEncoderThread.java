@@ -48,6 +48,7 @@ public class VideoEncoderThread extends Thread {
     private volatile boolean isStart = false;
     private volatile boolean isExit = false;
     private volatile boolean isMuxerReady = false;
+    private long prevOutputPTSUs = 0L;
 
     public VideoEncoderThread(int width, int height, WeakReference<MediaMuxerThread> mediaMuxer) {
         this.width = width;
@@ -282,6 +283,7 @@ public class VideoEncoderThread extends Thread {
                     }
 
                     if (mediaMuxer != null && mediaMuxer.isMuxerTrackAddDone()) {
+                        bufferInfo.presentationTimeUs = getPTSUs();
                         mediaMuxer.addMuxerData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, outputBuffer, bufferInfo));
                     }
 
@@ -337,5 +339,19 @@ public class VideoEncoderThread extends Thread {
             yu12[i + frameSize] = nv21[i * 2 + frameSize + 1];
             yu12[i + len + frameSize] = nv21[i * 2 + frameSize];
         }
+    }
+
+    /**
+     * get next encoding presentationTimeUs
+     *
+     * @return*/
+
+    private long getPTSUs() {
+        long result = System.nanoTime() / 1000L;
+        // presentationTimeUs should be monotonic
+        // otherwise muxer fail to write
+        if (result < prevOutputPTSUs)
+            result = (prevOutputPTSUs - result) + result;
+        return result;
     }
 }
