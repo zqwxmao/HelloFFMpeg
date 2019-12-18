@@ -3,6 +3,7 @@ package com.michael.libplayer.media;
 
 import com.michael.libplayer.opengl.core.Renderer;
 import com.michael.libplayer.opengl.filter.OesFilter;
+import com.michael.libplayer.opengl.utils.MatrixUtils;
 
 /**
  * WrapRenderer 用于包装其他Filter渲染OES纹理
@@ -14,6 +15,7 @@ public class WrapRenderer implements Renderer {
 
     public static final int TYPE_MOVE = 0;
     public static final int TYPE_CAMERA = 1;
+    public static final int TYPE_ORIGINAL = 2;
 
     public WrapRenderer(Renderer renderer) {
         this.mRenderer = renderer;
@@ -36,11 +38,17 @@ public class WrapRenderer implements Renderer {
                     -1.0f, 1.0f,
                     1.0f, 1.0f,
             });
+        } else if (flag == TYPE_ORIGINAL) {
+            mFilter.setVertexCo(MatrixUtils.getOriginalVertexCo());
         }
     }
 
     public float[] getTextureMatrix() {
         return mFilter.getTextureMatrix();
+    }
+
+    public void setTextureMatrix(float[] matrix) {
+        this.mFilter.setTextureMatrix(matrix);
     }
 
     @Override

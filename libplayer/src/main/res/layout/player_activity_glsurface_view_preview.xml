@@ -4,13 +4,28 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:id="@+id/fl_glsurface"
     tools:context=".activity.PlayerOpenGLPreviewActivity">
 
-    <com.michael.libplayer.opengl.view.PlayerCustomGLSurfaceView
+    <!--<com.michael.libplayer.opengl.view.PlayerCustomGLSurfaceView
         android:id="@+id/player_gl_sf"
         android:layout_marginTop="80dp"
         android:layout_marginBottom="100dp"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent" />-->
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="hello, GLSurfaceView"
+        android:textSize="18sp"
+        android:layout_gravity="center_horizontal"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="bye-bye, GLSurfaceView"
+        android:textSize="18sp"
+        android:textColor="#0F0"
+        android:layout_gravity="center_horizontal|bottom"/>
 </FrameLayout>

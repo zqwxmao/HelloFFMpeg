@@ -4,6 +4,7 @@ import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
 
+import com.michael.libplayer.opengl.renderer.PlayerGLSurfaceViewRenderer;
 import com.michael.libplayer.util.CameraManager;
 
 /**
@@ -13,8 +14,7 @@ import com.michael.libplayer.util.CameraManager;
  */
 public class PlayerCustomGLSurfaceView extends GLSurfaceView {
 
-    private Renderer renderer;
-    private CameraManager cameraManager;
+    private PlayerGLSurfaceViewRenderer renderer;
 
     public PlayerCustomGLSurfaceView(Context context) {
         super(context);
@@ -24,10 +24,10 @@ public class PlayerCustomGLSurfaceView extends GLSurfaceView {
         super(context, attrs);
     }
 
-    public void init(Renderer renderer, CameraManager cameraManager) {
+    public void init(PlayerGLSurfaceViewRenderer renderer, CameraManager cameraManager, boolean isPreviewStarted) {
         this.renderer = renderer;
-        this.cameraManager = cameraManager;
         setEGLContextClientVersion(2);
+        this.renderer.init(cameraManager, this, isPreviewStarted);
         setRenderer(this.renderer);
     }
 }

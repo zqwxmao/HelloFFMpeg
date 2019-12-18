@@ -33,8 +33,6 @@ public class PlayerOpenGLPreviewActivity extends BaseActivity implements Surface
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         this.surfaceHolder = holder;
-        cameraManager.setWidth(width);
-        cameraManager.setHeight(height);
         cameraManager.openCamera(Camera.CameraInfo.CAMERA_FACING_FRONT);
         cameraManager.setPreviewSurfaceHolder(surfaceHolder);
         cameraManager.setPreviewCallback(this);

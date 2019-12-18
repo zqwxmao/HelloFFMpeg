@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="player_font_16">16sp</dimen>
+    <dimen name="player_dimen_80">80dp</dimen>
 </resources>

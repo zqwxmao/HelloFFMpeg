@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.util.Log;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 
 import java.io.IOException;
@@ -20,20 +22,51 @@ public class CameraManager {
     private WeakReference<Activity> activityWeakReference;
     private Camera camera;
     private int cameraId;
-    private int width, height;
     private Camera.Size cameraSize;
+
+    public void setActivityWeakReference(Activity activityWeakReference) {
+        this.activityWeakReference = new WeakReference<>(activityWeakReference);
+    }
 
     public boolean openCamera(int cameraId) {
         try {
             this.cameraId = cameraId;
             this.camera = Camera.open(cameraId);
-            this.camera.setDisplayOrientation(90);
+//            this.camera.setDisplayOrientation(90);
+            setCameraDisplayOrientation(activityWeakReference.get(), cameraId, this.camera);
             setPreviewCameraSize();
         } catch (Exception e) {
+            Log.e("zqwx", "openCamera - "+e.getMessage());
             return false;
         }
         return true;
     }
+
+    private void setCameraDisplayOrientation(Activity activity,
+              int cameraId, android.hardware.Camera camera) {
+          android.hardware.Camera.CameraInfo info =
+                  new android.hardware.Camera.CameraInfo();
+          android.hardware.Camera.getCameraInfo(cameraId, info);
+          int rotation = activity.getWindowManager().getDefaultDisplay()
+                             .getRotation();
+          int degrees = 0;
+          switch (rotation) {
+              case Surface.ROTATION_0: degrees = 0; break;
+              case Surface.ROTATION_90: degrees = 90; break;
+              case Surface.ROTATION_180: degrees = 180; break;
+              case Surface.ROTATION_270: degrees = 270; break;
+          }
+
+          int result;
+          if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+              result = (info.orientation + degrees) % 360;
+              result = (360 - result) % 360;  // compensate the mirror
+          } else {  // back-facing
+              result = (info.orientation - degrees + 360) % 360;
+          }
+          camera.setDisplayOrientation(result);
+      }
+
     /*
      * 开启预览，是在GLSurfaceView创建成功后调用
      * */
@@ -67,19 +100,15 @@ public class CameraManager {
 
         List<Camera.Size> previewSizes = parameters.getSupportedPreviewSizes();
         int length = previewSizes.size();
-        int n, m = 0;
+        int last = 0, tmp;
         for (int i = 0; i < length; i++) {
-            n = Math.abs(previewSizes.get(i).width * previewSizes.get(i).height - width * height);
-            if (m == 0) {
-                m = n;
-            } else {
-                if (n < m) {
-                    m = n;
-                    this.cameraSize = previewSizes.get(i);
-                }
+            tmp = previewSizes.get(i).width * previewSizes.get(i).height;
+            if (last < tmp) {
+                last = tmp;
+                this.cameraSize = previewSizes.get(i);
             }
         }
-
+        Log.e("zqwx", this.cameraSize.width +" - "+this.cameraSize.height);
         parameters.setPreviewSize(this.cameraSize.width, this.cameraSize.height);
         parameters.setPreviewFormat(ImageFormat.NV21);
         this.camera.setParameters(parameters);
@@ -119,11 +148,4 @@ public class CameraManager {
         }
     }
 
-    public void setWidth(int width) {
-        this.width = width;
-    }
-
-    public void setHeight(int height) {
-        this.height = height;
-    }
 }
