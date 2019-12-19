@@ -38,20 +38,22 @@ public class PlayerGLSurfaceViewRenderer implements GLSurfaceView.Renderer {
     //opengl
     private int mOESTextureId = -1;
     private GroupFilter groupFilter;
-    private OesFilter oesFilter;
     private WaterMarkFilter waterMarkFilter;//水印滤镜
-    private SixScreenFilter sixScreenFilter;//仿抖音六屏特效
 
     private WrapRenderer wrapRenderer;
     private SurfaceTexture surfaceTexture;
     private float[] surfaceTextureMatrix = new float[16];
+    private int typeIndex = -1;
+
+    public PlayerGLSurfaceViewRenderer(int typeIndex) {
+        this.typeIndex = typeIndex;
+    }
 
     public void init(CameraManager cameraManager, PlayerCustomGLSurfaceView playerCustomGLSurfaceView, boolean isPreviewStarted) {
         this.cameraManager = cameraManager;
         this.playerCustomGLSurfaceView = new WeakReference<>(playerCustomGLSurfaceView);
         this.isPreviewStarted = isPreviewStarted;
         waterMarkFilter = new WaterMarkFilter().setMarkPosition(100, 100, 300, 300).setMark(BitmapFactory.decodeResource(playerCustomGLSurfaceView.getResources(), R.mipmap.ic_launcher_round));
-        sixScreenFilter = new SixScreenFilter();
     }
 
     @Override
@@ -59,11 +61,10 @@ public class PlayerGLSurfaceViewRenderer implements GLSurfaceView.Renderer {
         mOESTextureId = createTextureID(true);
         if (groupFilter == null) {
             groupFilter = new GroupFilter();
-//            groupFilter.addFilter(sixScreenFilter);
             groupFilter.addFilter(waterMarkFilter);
         }
         if (wrapRenderer == null) {
-            wrapRenderer = new WrapRenderer(groupFilter);
+            wrapRenderer = new WrapRenderer(groupFilter, this.typeIndex);
         }
         wrapRenderer.create();
         wrapRenderer.setFlag(TYPE_ORIGINAL);
@@ -127,5 +128,21 @@ public class PlayerGLSurfaceViewRenderer implements GLSurfaceView.Renderer {
         GLES20.glTexParameteri(target,
                 GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE);
         return texture[0];
+    }
+
+    public void setBrightLevel(float brightLevel) {
+        wrapRenderer.setBrightLevel(brightLevel);
+    }
+
+    public void setBeautyLevel(float beautyLevel) {
+        wrapRenderer.setBeautyLevel(beautyLevel);
+    }
+
+    public void setToneLevel(float toneLevel) {
+        wrapRenderer.setToneLevel(toneLevel);
+    }
+
+    public void setTexelOffset(float texelOffset) {
+        wrapRenderer.setTexelOffset(texelOffset);
     }
 }

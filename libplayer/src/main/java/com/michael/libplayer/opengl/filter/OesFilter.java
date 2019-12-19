@@ -5,6 +5,8 @@ import android.opengl.GLES20;
 
 import com.michael.libplayer.opengl.base.BaseFilter;
 
+import java.nio.FloatBuffer;
+
 
 /**
  * Oes纹理绘制滤镜
@@ -23,7 +25,7 @@ public class OesFilter extends BaseFilter {
             "    vTextureCo = (uTextureMatrix*vec4(aTextureCo,0,1)).xy;\n" +
             "}";
 
-    /*private static final String fragmentCode = "#extension GL_OES_EGL_image_external : require\n" +
+    private static final String fragmentCode = "#extension GL_OES_EGL_image_external : require\n" +
             "precision highp float;\n" +
             "varying highp vec2 vTextureCo;\n" +
             "uniform samplerExternalOES uTexture;\n" +
@@ -139,31 +141,76 @@ public class OesFilter extends BaseFilter {
             "    gl_FragColor.rgb = vec3(gl_FragColor.rgb + vec3(brightness));\n" +
 
             //
-            "}";*/
-    private static final String fragmentCode = "#extension GL_OES_EGL_image_external : require\n" +
+            "}";
+    private static final String fragmentCodeNineScreen = "#extension GL_OES_EGL_image_external : require\n" +
             "precision highp float;\n" +
             "varying highp vec2 vTextureCo;\n" +
             "uniform samplerExternalOES uTexture;\n" +
             "void main() {\n" +
-            "    highp vec2 ux = vTextureCo;\n"+
+            "    highp vec2 uv = vTextureCo;\n"+
             //左右分三屏
-            "    if(ux.x <= 1.0 / 3.0) {\n"+
-            "        ux.x = ux.x + 1.0 / 3.0;\n"+
-            "    } else if(ux.x >= 2.0 / 3.0) {\n"+
-            "        ux.x = ux.x - 1.0 / 3.0;\n"+
+            /*"    if(uv.x <= 1.0 / 3.0) {\n"+
+            "        uv.x = uv.x + 1.0 / 3.0;\n"+
+            "    } else if(uv.x >= 2.0 / 3.0) {\n"+
+            "        uv.x = uv.x - 1.0 / 3.0;\n"+
+            "    }\n"+*/
+            "    if(uv.x <= 1.0 / 3.0) {\n"+
+            "        uv.x = uv.x / (1.0 / 3.0);\n"+
+            "    } else if(uv.x >= 2.0 / 3.0) {\n"+
+            "        uv.x = (uv.x - 2.0 / 3.0 ) / (1.0 / 3.0);\n"+
+            "    } else {\n"+
+            "        uv.x = (uv.x - 1.0 / 3.0) / (1.0 / 3.0);\n"+
             "    }\n"+
             //上下分两屏，保留0.25~0.75
-            "    if(ux.y <= 0.5) {\n"+
-            "        ux.y = ux.y + 0.25;\n"+
+            /*"    if(uv.y <= 0.5) {\n"+
+            "        uv.y = uv.y + 0.25;\n"+
             "    } else {\n"+
-            "        ux.y = ux.y - 0.25;\n"+
+            "        uv.y = uv.y - 0.25;\n"+
             "    }\n"+
-            "    gl_FragColor = texture2D( uTexture, ux);\n" +
+            "    if(uv.y <= 1.0 / 3.0) {\n"+
+            "        uv.y = uv.y + 1.0 / 3.0;\n"+
+            "    } else if(uv.y >= 2.0 / 3.0) {\n"+
+            "        uv.y = uv.y - 1.0 / 3.0;\n"+
+            "    }\n"+*/
+            "    if(uv.y <= 1.0 / 3.0) {\n"+
+            "        uv.y = uv.y / (1.0 / 3.0);\n"+
+            "    } else if(uv.y >= 2.0 / 3.0) {\n"+
+            "        uv.y = (uv.y - 2.0 / 3.0 ) / (1.0 / 3.0);\n"+
+            "    } else {\n"+
+            "        uv.y = (uv.y - 1.0 / 3.0) / (1.0 / 3.0);\n"+
+            "    }\n"+
+            "    gl_FragColor = texture2D( uTexture, uv);\n" +
             "}";
 
+    //美颜
+    protected int paramsLocation;
+    protected int brightnessLocation;
+    protected int singleStepOffsetLocation;
+    protected int texelWidthLocation;
+    protected int texelHeightLocation;
 
-    public OesFilter() {
-        super(null, vertexCode, fragmentCode);
+    private float toneLevel = -0.5f;
+    private float beautyLevel = 1.2f;
+    private float brightLevel = 0.47f;
+    private float texelWidthOffset = 2;
+    private float texelHeightOffset = 2;
+    private float[] tmpVector = new float[4];
+    private int width;
+    private int height;
+    private int typeIndex;
+
+    public OesFilter(int typeIndex) {
+        super(null, vertexCode, getFragmentCode(typeIndex));
+    }
+
+    private static String getFragmentCode(int typeIndex) {
+        if (typeIndex == 0) {
+            return fragmentCodeNineScreen;
+        } else if (typeIndex == 1) {
+            return fragmentCode;
+        } else {
+            return fragmentCodeNineScreen;
+        }
     }
 
     @Override
@@ -172,4 +219,66 @@ public class OesFilter extends BaseFilter {
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId);
         GLES20.glUniform1i(mGLTexture, 0);
     }
+
+    @Override
+    protected void onCreate() {
+        super.onCreate();
+        this.paramsLocation = GLES20.glGetUniformLocation(mGLProgram, "params");
+        this.brightnessLocation = GLES20.glGetUniformLocation(mGLProgram, "brightness");
+        this.singleStepOffsetLocation = GLES20.glGetUniformLocation(mGLProgram, "singleStepOffset");
+        this.texelWidthLocation = GLES20.glGetUniformLocation(mGLProgram, "texelWidthOffset");
+        this.texelHeightLocation = GLES20.glGetUniformLocation(mGLProgram, "texelHeightOffset");
+    }
+
+    @Override
+    protected void onSizeChanged(int width, int height) {
+        super.onSizeChanged(width, height);
+        setTexelSize(width, height);
+    }
+
+    @Override
+    protected void onDraw() {
+        setParams(beautyLevel, toneLevel);
+        setBrightLevel(brightLevel);
+        setTexelOffset(texelWidthOffset);
+        super.onDraw();
+    }
+
+    public void setTexelSize(int width, int height) {
+        this.width = width;
+        this.height = height;
+        GLES20.glUniform2fv(this.singleStepOffsetLocation, 1, FloatBuffer.wrap(new float[]{width, height}));
+    }
+
+    public void setParams(float beautyLevel, float toneLevel) {
+        this.beautyLevel = beautyLevel;
+        this.toneLevel = toneLevel;
+        tmpVector[0] = 1.0f - 0.6f * beautyLevel;
+        tmpVector[1] = 1.0f - 0.3f * beautyLevel;
+        tmpVector[2] = 0.1f + 0.3f * toneLevel;
+        tmpVector[3] = 0.1f + 0.3f * toneLevel;
+        GLES20.glUniform4fv(this.paramsLocation, 1, FloatBuffer.wrap(tmpVector));
+    }
+
+    public void setBrightLevel(float brightLevel) {
+        this.brightLevel = brightLevel;
+        GLES20.glUniform1f(this.brightnessLocation, 0.6f * (-0.5f + brightLevel));
+    }
+
+    public void setBeautyLevel(float beautyLevel) {
+        this.beautyLevel = beautyLevel;
+        setParams(this.beautyLevel, this.toneLevel);
+    }
+
+    public void setToneLevel(float toneLevel) {
+        this.toneLevel = toneLevel;
+        setParams(this.beautyLevel, this.toneLevel);
+    }
+
+    public void setTexelOffset(float texelOffset) {
+        this.texelWidthOffset = this.texelHeightOffset = texelOffset;
+        GLES20.glUniform1f(this.texelWidthLocation, texelOffset / this.width);
+        GLES20.glUniform1f(this.texelHeightLocation, texelOffset / this.height);
+    }
+
 }

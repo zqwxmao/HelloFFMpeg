@@ -1,6 +1,8 @@
 package com.michael.libplayer.media;
 
 
+import android.opengl.GLES20;
+
 import com.michael.libplayer.opengl.core.Renderer;
 import com.michael.libplayer.opengl.filter.OesFilter;
 import com.michael.libplayer.opengl.utils.MatrixUtils;
@@ -19,7 +21,12 @@ public class WrapRenderer implements Renderer {
 
     public WrapRenderer(Renderer renderer) {
         this.mRenderer = renderer;
-        mFilter = new OesFilter();
+        setFlag(TYPE_MOVE);
+    }
+
+    public WrapRenderer(Renderer renderer, int typeIndex) {
+        this.mRenderer = renderer;
+        mFilter = new OesFilter(typeIndex);
         setFlag(TYPE_MOVE);
     }
 
@@ -82,5 +89,21 @@ public class WrapRenderer implements Renderer {
             mRenderer.destroy();
         }
         mFilter.destroy();
+    }
+
+    public void setBrightLevel(float brightLevel) {
+        mFilter.setBrightLevel(brightLevel);
+    }
+
+    public void setBeautyLevel(float beautyLevel) {
+        mFilter.setBeautyLevel(beautyLevel);
+    }
+
+    public void setToneLevel(float toneLevel) {
+        mFilter.setToneLevel(toneLevel);
+    }
+
+    public void setTexelOffset(float texelOffset) {
+        mFilter.setTexelOffset(texelOffset);
     }
 }
