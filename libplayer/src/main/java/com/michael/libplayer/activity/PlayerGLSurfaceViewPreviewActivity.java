@@ -27,6 +27,7 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
 
     private RadioButton rb1;
     private RadioButton rb2;
+    private RadioButton rb3;
     private LinearLayout llSb;
     private SeekBar sbStep;
     private SeekBar sbTone;
@@ -50,6 +51,7 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
 
         rb1 = findViewById(R.id.rb1);
         rb2 = findViewById(R.id.rb2);
+        rb3 = findViewById(R.id.rb3);
         rb1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -61,6 +63,13 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 inflateSurfaceView(1);
+                modelChoosed = true;
+            }
+        });
+        rb3.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                inflateSurfaceView(2);
                 modelChoosed = true;
             }
         });
@@ -91,7 +100,8 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
         Log.e("zqwx", "- "+openCamera);
         if (openCamera) {
         }
-        if (index == 1) {
+        if (index == 1
+        || index == 2) {
             llSb.setVisibility(View.VISIBLE);
             sbStep = llSb.findViewById(R.id.sbStep);
             sbTone = llSb.findViewById(R.id.sbTone);
