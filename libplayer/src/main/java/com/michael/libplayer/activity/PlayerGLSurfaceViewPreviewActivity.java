@@ -33,11 +33,13 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
     private RadioButton rb1;
     private RadioButton rb2;
     private RadioButton rb3;
+    private RadioButton rb4;
     private LinearLayout llSb;
     private SeekBar sbStep;
     private SeekBar sbTone;
     private SeekBar sbBeauty;
     private SeekBar sbBright;
+    private SeekBar sbOpacity;
 
     private boolean modelChoosed;
     private static float minstepoffset= -10;
@@ -48,6 +50,8 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
     private static float maxbeautyValue= 2.5f;
     private static float minbrightValue= 0;
     private static float maxbrightValue= 1;
+    private static float minOpacityValue= 0.5f;
+    private static float maxOpacityValue= 1f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +61,7 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
         rb1 = findViewById(R.id.rb1);
         rb2 = findViewById(R.id.rb2);
         rb3 = findViewById(R.id.rb3);
+        rb4 = findViewById(R.id.rb4);
         rb1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -75,6 +80,13 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 inflateSurfaceView(2);
+                modelChoosed = true;
+            }
+        });
+        rb4.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                inflateSurfaceView(3);
                 modelChoosed = true;
             }
         });
@@ -130,17 +142,20 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
         if (openCamera) {
         }
         if (index == 1
-        || index == 2) {
+        || index == 2
+        || index == 3) {
             llSb.setVisibility(View.VISIBLE);
             sbStep = llSb.findViewById(R.id.sbStep);
             sbTone = llSb.findViewById(R.id.sbTone);
             sbBeauty = llSb.findViewById(R.id.sbBeauty);
             sbBright = llSb.findViewById(R.id.sbBright);
+            sbOpacity = llSb.findViewById(R.id.sbOpacity);
 
             sbStep.setOnSeekBarChangeListener(this);
             sbTone.setOnSeekBarChangeListener(this);
             sbBeauty.setOnSeekBarChangeListener(this);
             sbBright.setOnSeekBarChangeListener(this);
+            sbOpacity.setOnSeekBarChangeListener(this);
         }
     }
 
@@ -162,6 +177,8 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
             glSurfaceViewRenderer.setBeautyLevel(range(progress, minbeautyValue, maxbeautyValue));
         } else if (id == R.id.sbBright) {
             glSurfaceViewRenderer.setBrightLevel(range(progress, minbrightValue, maxbrightValue));
+        } else if (id == R.id.sbOpacity) {
+            glSurfaceViewRenderer.setOpacity(range(progress, minOpacityValue, maxOpacityValue));
         }
     }
 

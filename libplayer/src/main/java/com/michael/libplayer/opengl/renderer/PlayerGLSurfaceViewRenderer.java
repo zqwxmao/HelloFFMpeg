@@ -145,4 +145,8 @@ public class PlayerGLSurfaceViewRenderer implements GLSurfaceView.Renderer {
     public void setTexelOffset(float texelOffset) {
         wrapRenderer.setTexelOffset(texelOffset);
     }
+
+    public void setOpacity(float opacity) {
+        wrapRenderer.setOpacity(opacity);
+    }
 }
