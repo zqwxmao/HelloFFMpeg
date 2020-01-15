@@ -33,6 +33,11 @@
         android:layout_height="wrap_content"
         android:paddingTop="40dp">
         <RadioButton
+            android:id="@+id/rb0"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="原图输入"/>
+        <RadioButton
             android:id="@+id/rb1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

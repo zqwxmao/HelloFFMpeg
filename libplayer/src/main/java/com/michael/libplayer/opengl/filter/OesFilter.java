@@ -25,6 +25,14 @@ public class OesFilter extends BaseFilter {
             "    vTextureCo = (uTextureMatrix*vec4(aTextureCo,0,1)).xy;\n" +
             "}";
 
+    private static final String fragmentInputCode = "#extension GL_OES_EGL_image_external : require\n" +
+            "precision mediump float;\n" +
+            "varying vec2 vTextureCo;\n" +
+            "uniform samplerExternalOES uTexture;\n" +
+            "void main() {\n" +
+            "    gl_FragColor = texture2D( uTexture, vTextureCo);\n" +
+            "}";
+
     private static final String fragmentCodeBeautyFace = "#extension GL_OES_EGL_image_external : require\n" +
             "precision highp float;\n" +
             "varying highp vec2 vTextureCo;\n" +
@@ -318,7 +326,9 @@ public class OesFilter extends BaseFilter {
     }
 
     private static String getFragmentCode(int typeIndex) {
-        if (typeIndex == 0) {
+        if (typeIndex == -1) {
+            return fragmentInputCode;
+        } else if (typeIndex == 0) {
             return fragmentCodeNineScreen;
         } else if (typeIndex == 1) {
             return fragmentCodeBeautyFace;

@@ -84,8 +84,8 @@ public class PlayerGLSurfaceViewRenderer implements GLSurfaceView.Renderer {
             surfaceTexture.getTransformMatrix(surfaceTextureMatrix);
         }
         if (!isPreviewStarted) {
-            initSurfaceTexture();
             isPreviewStarted = true;
+            initSurfaceTexture();
             return;
         }
         wrapRenderer.setTextureMatrix(surfaceTextureMatrix);

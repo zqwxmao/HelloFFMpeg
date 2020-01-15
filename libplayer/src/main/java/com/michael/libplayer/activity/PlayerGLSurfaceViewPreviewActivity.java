@@ -30,6 +30,7 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
     private PlayerGLSurfaceViewRenderer glSurfaceViewRenderer;
     private CameraManager cameraManager;
 
+    private RadioButton rb0;
     private RadioButton rb1;
     private RadioButton rb2;
     private RadioButton rb3;
@@ -54,9 +55,17 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.player_activity_glsurface_view_preview);
 
+        rb0 = findViewById(R.id.rb0);
         rb1 = findViewById(R.id.rb1);
         rb2 = findViewById(R.id.rb2);
         rb3 = findViewById(R.id.rb3);
+        rb0.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                inflateSurfaceView(-1);
+                modelChoosed = true;
+            }
+        });
         rb1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
