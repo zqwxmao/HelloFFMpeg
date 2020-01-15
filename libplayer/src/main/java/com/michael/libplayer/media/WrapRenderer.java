@@ -106,4 +106,8 @@ public class WrapRenderer implements Renderer {
     public void setTexelOffset(float texelOffset) {
         mFilter.setTexelOffset(texelOffset);
     }
+
+    public void setOpacity(float opacity) {
+        mFilter.setOpacity(opacity);
+    }
 }
