@@ -31,7 +31,13 @@ public class AudioEncoderThread extends Thread {
     private static final int SAMPLE_RATE = 44100;
     private static final int BIT_RATE = 64000;
     private static final int CHANNEL_COUNT = 1;
-    private static final int[] AUDIO_SOURCES = new int[]{MediaRecorder.AudioSource.DEFAULT};
+    private static final int[] AUDIO_SOURCES = new int[]{
+            MediaRecorder.AudioSource.MIC,
+            MediaRecorder.AudioSource.DEFAULT,
+            MediaRecorder.AudioSource.CAMCORDER,
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+            MediaRecorder.AudioSource.VOICE_RECOGNITION,
+    };
 
     private final Object lock = new Object();
     private MediaCodec audioCodec;      // API >= 16(Android 4.1.2)
@@ -39,13 +45,13 @@ public class AudioEncoderThread extends Thread {
     private volatile boolean isExit = false;
     private volatile boolean isStart = false;
     private volatile boolean isMuxerReady = false;
-    private WeakReference<MediaMuxerThread> mediaMuxerRunnable;
     private AudioRecord audioRecord;
     private long prevOutputPTSUs = 0L;
     private MediaFormat audioFormat;
 
-    public AudioEncoderThread(WeakReference<MediaMuxerThread> reference) {
-        this.mediaMuxerRunnable = reference;
+    private VideoEncoderThread.ICallback callback;
+
+    public AudioEncoderThread() {
         this.bufferInfo = new MediaCodec.BufferInfo();
         prepare();
     }
@@ -248,11 +254,6 @@ public class AudioEncoderThread extends Thread {
         }
 
         //获取解码后的数据
-        final MediaMuxerThread muxer = mediaMuxerRunnable.get();
-        if (muxer == null) {
-            Log.i(TAG, "MediaMuxerRunnable is unexpectedly null");
-            return;
-        }
         ByteBuffer[] encoderOutputBuffers = audioCodec.getOutputBuffers();
         int encoderStatus;
 
@@ -264,12 +265,9 @@ public class AudioEncoderThread extends Thread {
                 encoderOutputBuffers = audioCodec.getOutputBuffers();
             } else if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 final MediaFormat format = audioCodec.getOutputFormat(); // API >= 16
-                MediaMuxerThread mediaMuxerRunnable = this.mediaMuxerRunnable.get();
-                Log.e(TAG, "添加音轨 INFO_OUTPUT_FORMAT_CHANGED  mediaMuxerRunnable : "+mediaMuxerRunnable);
-                if (mediaMuxerRunnable != null) {
-                    Log.e(TAG, "添加音轨 INFO_OUTPUT_FORMAT_CHANGED : "+format.toString());
-                    mediaMuxerRunnable.addTrackIndex(MediaMuxerThread.TRACK_AUDIO, format);
-
+                Log.e(TAG, "添加音轨 INFO_OUTPUT_FORMAT_CHANGED  "+format.toString());
+                if (this.callback != null) {
+                    this.callback.onInfoFormatChanged(format);
                 }
             } else if (encoderStatus < 0) {
                 Log.e(TAG, "encoderStatus < 0");
@@ -277,12 +275,13 @@ public class AudioEncoderThread extends Thread {
                 final ByteBuffer encodedData = encoderOutputBuffers[encoderStatus];
                 if ( (bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
                     bufferInfo.size = 0;
+                    Log.d(TAG, "drain:BUFFER_FLAG_CODEC_CONFIG");
                 }
 
-                if (bufferInfo.size != 0 && muxer != null && muxer.isMuxerTrackAddDone()) {
+                if (bufferInfo.size != 0 && this.callback != null) {
                     bufferInfo.presentationTimeUs = getPTSUs();
                     Log.e(TAG, "发送音频数据 bufferInfo.size : "+bufferInfo.size);
-                    muxer.addMuxerData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_AUDIO, encodedData, bufferInfo));
+                    this.callback.onOutputVideoData(encodedData, bufferInfo);
                     prevOutputPTSUs = bufferInfo.presentationTimeUs;
                 }
                 audioCodec.releaseOutputBuffer(encoderStatus, false);
@@ -302,5 +301,9 @@ public class AudioEncoderThread extends Thread {
         if (result < prevOutputPTSUs)
             result = (prevOutputPTSUs - result) + result;
         return result;
+    }
+
+    public void setCallback(VideoEncoderThread.ICallback callback) {
+        this.callback = callback;
     }
 }

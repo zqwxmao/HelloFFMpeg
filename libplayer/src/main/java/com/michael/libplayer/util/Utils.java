@@ -16,4 +16,8 @@ public class Utils {
         }
         return false;
     }
+
+    public static boolean isEmpty(Object[] objects) {
+        return  objects==null || objects.length==0;
+    }
 }

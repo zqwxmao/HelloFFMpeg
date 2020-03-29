@@ -1,10 +1,12 @@
 package com.michael.libplayer.base;
 
+import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -14,6 +16,10 @@ import android.view.WindowManager;
 import com.michael.libplayer.R;
 import com.michael.libplayer.util.SystemBarTintManager;
 import com.michael.libplayer.util.Utils;
+import com.mj.permission.DynamicPermissionEmitter;
+import com.mj.permission.DynamicPermissionEntity;
+
+import java.util.Map;
 
 public abstract class BaseActivity extends AppCompatActivity {
 
@@ -22,6 +28,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        checkPermission();
         if (getSupportActionBar() != null) {
             getSupportActionBar().hide();
         }
@@ -30,6 +37,31 @@ public abstract class BaseActivity extends AppCompatActivity {
         //设置标题栏
         mActionBarType = getDefaultActionBarType();
         setupActionBar();
+    }
+
+    private void checkPermission() {
+        final String[] permissions = getPermissions();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Utils.isEmpty(permissions)) {
+            DynamicPermissionEmitter permissionEmitter = new DynamicPermissionEmitter(this);
+            permissionEmitter.emitterPermission(new DynamicPermissionEmitter.ApplyPermissionsCallback() {
+
+                @Override
+                public void applyPermissionResult(Map<String, DynamicPermissionEntity> permissionEntityMap) {
+                    DynamicPermissionEntity permissionEntity = permissionEntityMap.get(permissions);
+                    if (permissionEntity.isGranted()) {
+                        //权限允许，可以搞事情了
+                    } else if (permissionEntity.shouldShowRequestPermissionRationable()) {
+                        //勾选不在提示，且点击了拒绝，在这里给用户提示权限的重要性，给一个友好的提示
+                    } else {
+                        //拒绝了权限，不能乱搞
+                    }
+                }
+            }, permissions);
+        }
+    }
+
+    protected String[] getPermissions() {
+        return null;
     }
 
     /**

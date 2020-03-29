@@ -100,11 +100,10 @@ public class MediaMuxerThread extends Thread {
     }
 
     public void addMuxerData(MuxerData data) {
+        muxerDatas.add(data);
         if (!isMuxerTrackAddDone()) {
             return;
         }
-
-        muxerDatas.add(data);
         synchronized (lock) {
             lock.notify();
         }
@@ -177,8 +176,34 @@ public class MediaMuxerThread extends Thread {
     private void initMuxer() {
         muxerDatas = new Vector<>();
         fileSwapHelper = new FileUtils();
-        audioEncoderThread = new AudioEncoderThread(new WeakReference<>(this));
-        videoEncoderThread = new VideoEncoderThread(VideoEncoderThread.IMAGE_WIDTH, VideoEncoderThread.IMAGE_HEIGHT, new WeakReference<>(this));
+        audioEncoderThread = new AudioEncoderThread();
+        audioEncoderThread.setCallback(new VideoEncoderThread.ICallback() {
+            @Override
+            public void onInfoFormatChanged(MediaFormat newFormat) {
+                addTrackIndex(MediaMuxerThread.TRACK_AUDIO, newFormat);
+            }
+
+            @Override
+            public void onOutputVideoData(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
+//                if (isMuxerTrackAddDone()) {
+                    addMuxerData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_AUDIO, byteBuffer, bufferInfo));
+//                }
+            }
+        });
+        videoEncoderThread = new VideoEncoderThread(VideoEncoderThread.IMAGE_WIDTH, VideoEncoderThread.IMAGE_HEIGHT);
+        videoEncoderThread.setCallback(new VideoEncoderThread.ICallback() {
+            @Override
+            public void onInfoFormatChanged(MediaFormat newFormat) {
+                addTrackIndex(MediaMuxerThread.TRACK_VIDEO, newFormat);
+            }
+
+            @Override
+            public void onOutputVideoData(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
+//                if (isMuxerTrackAddDone()) {
+                    addMuxerData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, byteBuffer, bufferInfo));
+//                }
+            }
+        });
         audioEncoderThread.start();
         videoEncoderThread.start();
         try {

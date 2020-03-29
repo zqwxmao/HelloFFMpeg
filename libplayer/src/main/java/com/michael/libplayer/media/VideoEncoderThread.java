@@ -8,6 +8,7 @@ import android.os.Build;
 import android.util.Log;
 
 import com.michael.libplayer.activity.PlayerCameraRecordMuxerActivity;
+import com.michael.libplayer.util.YUVUtils;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -42,7 +43,6 @@ public class VideoEncoderThread extends Thread {
     private MediaCodec videoCodec;      //Android硬解解码器
     private MediaCodec.BufferInfo bufferInfo;   //编解码Buffer相关信息
 
-    private WeakReference<MediaMuxerThread> mediaMuxer;     //音视频混合器
     private MediaFormat mediaFormat;        //音视频格式
 
     private volatile boolean isStart = false;
@@ -50,10 +50,11 @@ public class VideoEncoderThread extends Thread {
     private volatile boolean isMuxerReady = false;
     private long prevOutputPTSUs = 0L;
 
-    public VideoEncoderThread(int width, int height, WeakReference<MediaMuxerThread> mediaMuxer) {
+    private ICallback callback;
+
+    public VideoEncoderThread(int width, int height) {
         this.width = width;
         this.height = height;
-        this.mediaMuxer = mediaMuxer;
         this.frameBytes = new Vector<byte[]>();
         prepare();
     }
@@ -217,10 +218,10 @@ public class VideoEncoderThread extends Thread {
 
         switch (mediaFormat.getInteger(MediaFormat.KEY_COLOR_FORMAT)) {
             case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar:
-                NV21ToYU12(input, frameData, this.width, this.height);
+                YUVUtils.NV21ToYU12(input, frameData, this.width, this.height);
                 break;
             case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar:
-                NV21toI420SemiPlanar(input, frameData, this.width, this.height);
+                YUVUtils.NV21toI420SemiPlanar(input, frameData, this.width, this.height);
                 break;
         }
 
@@ -231,7 +232,7 @@ public class VideoEncoderThread extends Thread {
             ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
             inputBuffer.clear();
             inputBuffer.put(frameData);
-            videoCodec.queueInputBuffer(inputBufferIndex, 0, frameData.length, System.nanoTime() / 1000, 0);
+            videoCodec.queueInputBuffer(inputBufferIndex, 0, frameData.length, getPTSUs(), 0);
         } else {
 
         }
@@ -246,9 +247,8 @@ public class VideoEncoderThread extends Thread {
                 outputBuffers = videoCodec.getOutputBuffers();
             } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 MediaFormat newFormat = videoCodec.getOutputFormat();
-                MediaMuxerThread mediaMuxerRunnable = mediaMuxer.get();
-                if (mediaMuxerRunnable != null) {
-                    mediaMuxerRunnable.addTrackIndex(MediaMuxerThread.TRACK_VIDEO, newFormat);
+                if (this.callback != null) {
+                    this.callback.onInfoFormatChanged(newFormat);
                 }
             } else if (outputBufferIndex < 0) {
 
@@ -272,19 +272,18 @@ public class VideoEncoderThread extends Thread {
                     MediaFormat format = videoCodec.getOutputFormat();
                     format.setByteBuffer("csd-0",outputBuffer);
                     bufferInfo.size = 0;
+                    Log.d(TAG, "drain:BUFFER_FLAG_CODEC_CONFIG");
                 }
                 if (bufferInfo.size != 0) {
-                    MediaMuxerThread mediaMuxer = this.mediaMuxer.get();
 
                     if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.KITKAT) {
                         //adjust the ByteBuffer values to match BufferInfo
                         outputBuffer.position(bufferInfo.offset);
                         outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
                     }
-
-                    if (mediaMuxer != null && mediaMuxer.isMuxerTrackAddDone()) {
+                    if (this.callback != null) {
                         bufferInfo.presentationTimeUs = getPTSUs();
-                        mediaMuxer.addMuxerData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, outputBuffer, bufferInfo));
+                        this.callback.onOutputVideoData(outputBuffer, bufferInfo);
                     }
 
                     Log.d(TAG, "sent "+bufferInfo.size + "frameBytes to muxer");
@@ -293,52 +292,6 @@ public class VideoEncoderThread extends Thread {
             }
         } while (outputBufferIndex >= 0);
         Log.i(TAG, "encodeFrame END ! ");
-    }
-
-    /**
-     * Y Y Y Y
-     * Y Y Y Y
-     * Y Y Y Y
-     * Y Y Y Y
-     * U V U V
-     * U V U V
-     * @param nv21bytes
-     * @param i420bytes
-     * @param width
-     * @param height
-     */
-    private void NV21toI420SemiPlanar(byte[] nv21bytes, byte[] i420bytes, int width, int height) {
-        System.arraycopy(nv21bytes, 0, i420bytes, 0, width * height);
-        for (int i = width * height; i < nv21bytes.length; i += 2) {
-            i420bytes[i] = nv21bytes[i + 1];
-            i420bytes[i + 1] = nv21bytes[i];
-        }
-    }
-
-    /**
-     * COLOR_FormatYUV420Planar / I420 / YU12
-     * Y Y Y Y
-     * Y Y Y Y
-     * Y Y Y Y
-     * Y Y Y Y
-     * U U U U
-     * V V V V
-     * @param nv21
-     * @param yu12
-     * @param width
-     * @param height
-     */
-    private void NV21ToYU12(byte[] nv21, byte[] yu12, int width, int height){
-        if(nv21 == null || yu12 == null) {
-            return;
-        }
-        int frameSize = width * height;
-        System.arraycopy(nv21, 0, yu12, 0, frameSize);
-        int len = frameSize / 4;
-        for (int i = 0; i < len; i++ ) {
-            yu12[i + frameSize] = nv21[i * 2 + frameSize + 1];
-            yu12[i + len + frameSize] = nv21[i * 2 + frameSize];
-        }
     }
 
     /**
@@ -353,5 +306,14 @@ public class VideoEncoderThread extends Thread {
         if (result < prevOutputPTSUs)
             result = (prevOutputPTSUs - result) + result;
         return result;
+    }
+
+    public void setCallback(ICallback callback) {
+        this.callback = callback;
+    }
+
+    public interface ICallback {
+         void onInfoFormatChanged(MediaFormat newFormat);
+         void onOutputVideoData(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo);
     }
 }

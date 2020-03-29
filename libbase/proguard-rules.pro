@@ -19,15 +19,3 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
-
--keepclasseswithmembers class * {
-    @com.ninetripods.aopermission.permissionlib.annotation.NeedPermission <methods>;
-}
-
--keepclasseswithmembers class * {
-    @com.ninetripods.aopermission.permissionlib.annotation.PermissionCanceled <methods>;
-}
-
--keepclasseswithmembers class * {
-    @com.ninetripods.aopermission.permissionlib.annotation.PermissionDenied <methods>;
-}

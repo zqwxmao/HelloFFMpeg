@@ -1,5 +1,6 @@
 package com.michael.libplayer.activity;
 
+import android.Manifest;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.os.Bundle;
@@ -14,6 +15,8 @@ import com.michael.libplayer.R;
 import com.michael.libplayer.base.BaseActivity;
 import com.michael.libplayer.media.MediaMuxerThread;
 import com.michael.libplayer.media.VideoEncoderThread;
+import com.michael.libplayer.util.CameraUtils;
+import com.michael.libplayer.util.YUVUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -22,6 +25,7 @@ public class PlayerCameraRecordMuxerActivity extends BaseActivity implements Sur
 
     public static final String TAG = PlayerCameraRecordMuxerActivity.class.getSimpleName() + "/ ";
 
+    private int cameraId = Camera.CameraInfo.CAMERA_FACING_FRONT;
     SurfaceHolder surfaceHolder;
     SurfaceView surfaceView;
     Button btnStartStop;
@@ -58,7 +62,18 @@ public class PlayerCameraRecordMuxerActivity extends BaseActivity implements Sur
     }
 
     @Override
+    protected String[] getPermissions() {
+        return new String[]{
+                Manifest.permission.CAMERA,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.MODIFY_AUDIO_SETTINGS,
+        };
+    }
+
+    @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
+//        MediaMuxerThread.addVideoFrameData(YUVUtils.rotateYUVDegree270(data,VideoEncoderThread.IMAGE_WIDTH, VideoEncoderThread.IMAGE_HEIGHT));
         MediaMuxerThread.addVideoFrameData(data);
     }
 
@@ -79,8 +94,8 @@ public class PlayerCameraRecordMuxerActivity extends BaseActivity implements Sur
     }
 
     private void startCamera() {
-        camera = Camera.open(Camera.CameraInfo.CAMERA_FACING_FRONT);
-        camera.setDisplayOrientation(90);
+        camera = Camera.open(cameraId);
+        camera.setDisplayOrientation(CameraUtils.getDisplayOrientation(cameraId, this));
         Camera.Parameters parameters = camera.getParameters();
         parameters.setPreviewFormat(ImageFormat.NV21);
 
