@@ -16,7 +16,7 @@ public class PlayerMainActivity extends AppCompatActivity {
       "2.使用VideoView拉流视频流文件播放",
       "3.使用MediaCodec硬编码/FFMpeg推流",
       "4.使用OpenGLES预览相机",
-      "4.使用GLSurfaceView预览相机",
+      "5.使用GLSurfaceView预览相机",
       "",
     };
 

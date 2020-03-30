@@ -155,8 +155,10 @@ public class PlayerGLSurfaceViewPreviewActivity extends BaseActivity implements 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        cameraManager.stopPreview();
-        cameraManager.releaseCamera();
+        if (cameraManager != null) {
+            cameraManager.stopPreview();
+            cameraManager.releaseCamera();
+        }
     }
 
     @Override
