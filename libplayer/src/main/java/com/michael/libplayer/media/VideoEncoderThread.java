@@ -239,6 +239,9 @@ public class VideoEncoderThread extends Thread {
 
         int outputBufferIndex;
         ByteBuffer[] outputBuffers = videoCodec.getOutputBuffers();
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            outputBuffers = videoCodec.getOutputBuffers();
+        }
         do {
             outputBufferIndex = videoCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
             Log.e(TAG, "发送视频数据 outputBufferIndex : "+outputBufferIndex);
@@ -260,7 +263,7 @@ public class VideoEncoderThread extends Thread {
 
                 ByteBuffer outputBuffer;
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                    outputBuffer = videoCodec.getOutputBuffers()[outputBufferIndex];
+                    outputBuffer = outputBuffers[outputBufferIndex];
                 } else {
                     outputBuffer = videoCodec.getOutputBuffer(outputBufferIndex);
                 }

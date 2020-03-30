@@ -9,7 +9,6 @@ import com.michael.libplayer.activity.PlayerCameraRecordMuxerActivity;
 import com.michael.libplayer.util.FileUtils;
 
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Vector;
@@ -39,15 +38,31 @@ public class MediaMuxerThread extends Thread {
     private VideoEncoderThread videoEncoderThread;
     private AudioEncoderThread audioEncoderThread;
 
+    private volatile boolean muxed = true;
+    private ICallback callback;
+
     private MediaMuxerThread(){}
+    private MediaMuxerThread(boolean muxed){
+        this.muxed = muxed;
+    }
 
     public static void startMuxer() {
+        startMuxer(true, null);
+    }
+    public static void startMuxer(boolean muxed, ICallback callback) {
         if (INSTANCE == null) {
             synchronized (MediaMuxerThread.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new MediaMuxerThread();
+                    INSTANCE = new MediaMuxerThread(muxed);
+                    INSTANCE.callback = callback;
                     INSTANCE.start();
                 }
+            }
+        } else {
+            INSTANCE.muxed = muxed;
+            INSTANCE.callback = callback;
+            if (!INSTANCE.isAlive()) {
+                INSTANCE.start();
             }
         }
     }
@@ -61,6 +76,7 @@ public class MediaMuxerThread extends Thread {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            INSTANCE.callback = null;
             INSTANCE = null;
         }
     }
@@ -71,21 +87,21 @@ public class MediaMuxerThread extends Thread {
     }
 
     private void readyStart(String filePath) throws IOException {
-        isExit = false;
-        isVideoTrackAdd = false;
-        isAudioTrackAdd = false;
-        muxerDatas.clear();
 
         mediaMuxer = new MediaMuxer(filePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
         mediaMuxer.setOrientationHint(270);
         Log.e(TAG, "mediaMuxer init : "+mediaMuxer);
+        setAudioVideoReady();
+        Log.e(TAG, "readyStart 保存至 ： "+filePath);
+    }
+
+    private void setAudioVideoReady() {
         if (audioEncoderThread != null) {
             audioEncoderThread.setMuxerReady(true);
         }
         if (videoEncoderThread != null) {
             videoEncoderThread.setMuxerReady(true);
         }
-        Log.e(TAG, "readyStart 保存至 ： "+filePath);
     }
 
     public static void addVideoFrameData(byte[] data) {
@@ -181,13 +197,17 @@ public class MediaMuxerThread extends Thread {
         audioEncoderThread.setCallback(new VideoEncoderThread.ICallback() {
             @Override
             public void onInfoFormatChanged(MediaFormat newFormat) {
-                addTrackIndex(MediaMuxerThread.TRACK_AUDIO, newFormat);
+                if (muxed) {
+                    addTrackIndex(MediaMuxerThread.TRACK_AUDIO, newFormat);
+                }
             }
 
             @Override
             public void onOutputVideoData(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
-                if (isMuxerTrackAddDone()) {
+                if (muxed && isMuxerTrackAddDone()) {
                     writeSampleData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_AUDIO, byteBuffer, bufferInfo));
+                } else if (!muxed && callback != null) {
+                    callback.onWriteSampleData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_AUDIO, byteBuffer, bufferInfo));
                 }
             }
         });
@@ -195,23 +215,39 @@ public class MediaMuxerThread extends Thread {
         videoEncoderThread.setCallback(new VideoEncoderThread.ICallback() {
             @Override
             public void onInfoFormatChanged(MediaFormat newFormat) {
-                addTrackIndex(MediaMuxerThread.TRACK_VIDEO, newFormat);
+                if (muxed) {
+                    addTrackIndex(MediaMuxerThread.TRACK_VIDEO, newFormat);
+                }
             }
 
             @Override
             public void onOutputVideoData(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
-                if (isMuxerTrackAddDone()) {
+                if (muxed && isMuxerTrackAddDone()) {
                     writeSampleData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, byteBuffer, bufferInfo));
+                } else if (!muxed && callback != null) {
+                    callback.onWriteSampleData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, byteBuffer, bufferInfo));
                 }
             }
         });
         audioEncoderThread.start();
         videoEncoderThread.start();
-        try {
-            readyStart();
-        } catch (IOException e) {
-            Log.e(TAG, "initMuxer 异常 : "+ e.getMessage());
+        conditionReady();
+        if (muxed) {
+            try {
+                readyStart();
+            } catch (IOException e) {
+                Log.e(TAG, "initMuxer 异常 : " + e.getMessage());
+            }
+        } else {
+            setAudioVideoReady();
         }
+    }
+
+    private void conditionReady() {
+        isExit = false;
+        isVideoTrackAdd = false;
+        isAudioTrackAdd = false;
+        muxerDatas.clear();
     }
 
     @Override
@@ -276,6 +312,7 @@ public class MediaMuxerThread extends Thread {
         readyStop();
 
         try {
+            conditionReady();
             readyStart(fileName);
         } catch (Exception e) {
             Log.e(TAG, "readyStart 重启混合器失败，尝试再次重启 "+e.getMessage());
@@ -334,7 +371,9 @@ public class MediaMuxerThread extends Thread {
                 e.printStackTrace();
             }
         }
-        readyStop();
+        if (muxed) {
+            readyStop();
+        }
     }
 
     /**
@@ -350,5 +389,25 @@ public class MediaMuxerThread extends Thread {
             this.byteBuffer = byteBuffer;
             this.bufferInfo = bufferInfo;
         }
+
+        public int getTrackIndex() {
+            return trackIndex;
+        }
+
+        public ByteBuffer getByteBuffer() {
+            return byteBuffer;
+        }
+
+        public MediaCodec.BufferInfo getBufferInfo() {
+            return bufferInfo;
+        }
+    }
+
+    public interface ICallback {
+        void onWriteSampleData(MuxerData muxerData);
+    }
+
+    public void setCallback(ICallback callback) {
+        this.callback = callback;
     }
 }

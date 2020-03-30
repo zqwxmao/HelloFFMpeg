@@ -14,6 +14,7 @@ import android.widget.TextView;
 import com.michael.libplayer.R;
 import com.michael.libplayer.base.BaseActivity;
 import com.michael.libplayer.media.MediaMuxerThread;
+import com.michael.libplayer.media.MediaRtmpEncoder;
 import com.michael.libplayer.media.VideoEncoderThread;
 import com.michael.libplayer.util.CameraUtils;
 import com.michael.libplayer.util.YUVUtils;
@@ -31,6 +32,8 @@ public class PlayerCameraRecordMuxerActivity extends BaseActivity implements Sur
     Button btnStartStop;
     Button btnStartPublishRtmp;
     Camera camera;
+
+    private MediaRtmpEncoder mediaRtmpEncoder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -142,7 +145,33 @@ public class PlayerCameraRecordMuxerActivity extends BaseActivity implements Sur
                 MediaMuxerThread.startMuxer();
             }
         } else if (id == R.id.btnStartPublishRtmp) {
-
+            if (v.getTag() != null && v.getTag().toString().equalsIgnoreCase("stop")) {
+                v.setTag("start");
+                btnStartPublishRtmp.setText(R.string.player_start_publish_rtmp);
+                stopCamera();
+                MediaMuxerThread.stopMuxer();
+                mediaRtmpEncoder.stop();
+            } else {
+                v.setTag("stop");
+                btnStartPublishRtmp.setText(R.string.player_stop_publish_rtmp);
+                startCamera();
+                if (mediaRtmpEncoder == null){
+                    mediaRtmpEncoder = new MediaRtmpEncoder();
+                }
+                MediaMuxerThread.startMuxer(false, new MediaMuxerThread.ICallback() {
+                    @Override
+                    public void onWriteSampleData(MediaMuxerThread.MuxerData muxerData) {
+                        if (muxerData != null) {
+                            if (muxerData.getTrackIndex() == MediaMuxerThread.TRACK_VIDEO) {
+                                mediaRtmpEncoder.addVideoData(muxerData);
+                            } else if (muxerData.getTrackIndex() == MediaMuxerThread.TRACK_AUDIO) {
+                                mediaRtmpEncoder.addAudioData(muxerData);
+                            }
+                        }
+                    }
+                });
+                mediaRtmpEncoder.start();
+            }
         }
     }
 }
