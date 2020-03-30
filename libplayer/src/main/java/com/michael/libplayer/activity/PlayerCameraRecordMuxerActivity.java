@@ -21,7 +21,7 @@ import com.michael.libplayer.util.YUVUtils;
 import java.io.IOException;
 import java.util.List;
 
-public class PlayerCameraRecordMuxerActivity extends BaseActivity implements SurfaceHolder.Callback, Camera.PreviewCallback {
+public class PlayerCameraRecordMuxerActivity extends BaseActivity implements SurfaceHolder.Callback, Camera.PreviewCallback, View.OnClickListener {
 
     public static final String TAG = PlayerCameraRecordMuxerActivity.class.getSimpleName() + "/ ";
 
@@ -29,7 +29,7 @@ public class PlayerCameraRecordMuxerActivity extends BaseActivity implements Sur
     SurfaceHolder surfaceHolder;
     SurfaceView surfaceView;
     Button btnStartStop;
-    TextView textView;
+    Button btnStartPublishRtmp;
     Camera camera;
 
     @Override
@@ -38,24 +38,10 @@ public class PlayerCameraRecordMuxerActivity extends BaseActivity implements Sur
         setContentView(R.layout.player_activity_camera_record_muxer);
 
         surfaceView = findViewById(R.id.surface);
-        btnStartStop = findViewById(R.id.btn);
-        textView = findViewById(R.id.text);
-        btnStartStop.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (v.getTag() != null && v.getTag().toString().equalsIgnoreCase("stop")) {
-                    v.setTag("start");
-                    btnStartStop.setText("start");
-                    stopCamera();
-                    MediaMuxerThread.stopMuxer();
-                } else {
-                    v.setTag("stop");
-                    btnStartStop.setText("stop");
-                    startCamera();
-                    MediaMuxerThread.startMuxer();
-                }
-            }
-        });
+        btnStartStop = findViewById(R.id.btnStartRecord);
+        btnStartPublishRtmp= findViewById(R.id.btnStartPublishRtmp);
+        btnStartStop.setOnClickListener(this::onClick);
+        btnStartPublishRtmp.setOnClickListener(this::onClick);
 
         surfaceHolder = surfaceView.getHolder();
         surfaceHolder.addCallback(this);
@@ -137,6 +123,26 @@ public class PlayerCameraRecordMuxerActivity extends BaseActivity implements Sur
             camera.stopPreview();
             camera.release();
             camera = null;
+        }
+    }
+
+    @Override
+    public void onClick(View v) {
+        int id = v.getId();
+        if (id == R.id.btnStartRecord) {
+            if (v.getTag() != null && v.getTag().toString().equalsIgnoreCase("stop")) {
+                v.setTag("start");
+                btnStartStop.setText(R.string.player_start_record_video);
+                stopCamera();
+                MediaMuxerThread.stopMuxer();
+            } else {
+                v.setTag("stop");
+                btnStartStop.setText(R.string.player_stop_record_video);
+                startCamera();
+                MediaMuxerThread.startMuxer();
+            }
+        } else if (id == R.id.btnStartPublishRtmp) {
+
         }
     }
 }

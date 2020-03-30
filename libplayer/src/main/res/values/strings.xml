@@ -1,5 +1,8 @@
 <resources>
     <string name="player_app_name">libplayer</string>
     <string name="player_enter_player">进入视频预览界面</string>
-    <string name="player_start_record_video">录制视频</string>
+    <string name="player_start_record_video">开始录制视频</string>
+    <string name="player_stop_record_video">停止录制视频</string>
+    <string name="player_start_publish_rtmp">开始通过rtmp推送音视频</string>
+    <string name="player_stop_publish_rtmp">停止通过rtmp推送音视频</string>
 </resources>

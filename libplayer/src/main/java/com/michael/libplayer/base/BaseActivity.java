@@ -48,12 +48,14 @@ public abstract class BaseActivity extends AppCompatActivity {
                 @Override
                 public void applyPermissionResult(Map<String, DynamicPermissionEntity> permissionEntityMap) {
                     DynamicPermissionEntity permissionEntity = permissionEntityMap.get(permissions);
-                    if (permissionEntity.isGranted()) {
-                        //权限允许，可以搞事情了
-                    } else if (permissionEntity.shouldShowRequestPermissionRationable()) {
-                        //勾选不在提示，且点击了拒绝，在这里给用户提示权限的重要性，给一个友好的提示
-                    } else {
-                        //拒绝了权限，不能乱搞
+                    if (permissionEntity != null) {
+                        if (permissionEntity.isGranted()) {
+                            //权限允许，可以搞事情了
+                        } else if (permissionEntity.shouldShowRequestPermissionRationable()) {
+                            //勾选不在提示，且点击了拒绝，在这里给用户提示权限的重要性，给一个友好的提示
+                        } else {
+                            //拒绝了权限，不能乱搞
+                        }
                     }
                 }
             }, permissions);

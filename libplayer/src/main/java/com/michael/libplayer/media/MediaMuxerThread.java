@@ -77,6 +77,7 @@ public class MediaMuxerThread extends Thread {
         muxerDatas.clear();
 
         mediaMuxer = new MediaMuxer(filePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+        mediaMuxer.setOrientationHint(270);
         Log.e(TAG, "mediaMuxer init : "+mediaMuxer);
         if (audioEncoderThread != null) {
             audioEncoderThread.setMuxerReady(true);
@@ -185,9 +186,9 @@ public class MediaMuxerThread extends Thread {
 
             @Override
             public void onOutputVideoData(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
-//                if (isMuxerTrackAddDone()) {
-                    addMuxerData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_AUDIO, byteBuffer, bufferInfo));
-//                }
+                if (isMuxerTrackAddDone()) {
+                    writeSampleData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_AUDIO, byteBuffer, bufferInfo));
+                }
             }
         });
         videoEncoderThread = new VideoEncoderThread(VideoEncoderThread.IMAGE_WIDTH, VideoEncoderThread.IMAGE_HEIGHT);
@@ -199,9 +200,9 @@ public class MediaMuxerThread extends Thread {
 
             @Override
             public void onOutputVideoData(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
-//                if (isMuxerTrackAddDone()) {
-                    addMuxerData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, byteBuffer, bufferInfo));
-//                }
+                if (isMuxerTrackAddDone()) {
+                    writeSampleData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, byteBuffer, bufferInfo));
+                }
             }
         });
         audioEncoderThread.start();
@@ -223,12 +224,8 @@ public class MediaMuxerThread extends Thread {
             if (isMuxerTrackAddDone()) {
                 if (muxerDatas.isEmpty()) {
                     synchronized (lock) {
-                        try {
-                            Log.e(TAG, "等待混合数据");
-                            lock.wait();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
+                        isExit = true;
+                        Log.e(TAG, "等待混合数据");
                     }
                 } else {
                     if (fileSwapHelper.requestSwapFile()) {
@@ -236,20 +233,6 @@ public class MediaMuxerThread extends Thread {
                         String nextFileName = fileSwapHelper.getNextFileName();
                         Log.e(TAG, "正在重启混合器... "+nextFileName);
                         restart(nextFileName);
-                    } else {
-                        MuxerData data = muxerDatas.remove(0);
-                        int track;
-                        if (data.trackIndex == TRACK_VIDEO) {
-                            track = videoTrackIndex;
-                        } else {
-                            track = audioTrackIndex;
-                        }
-                        Log.e(TAG, "写入混合数据 "+data.bufferInfo.size);
-                        try {
-                            mediaMuxer.writeSampleData(track, data.byteBuffer, data.bufferInfo);
-                        } catch (Exception e) {
-                            Log.e(TAG, "写入混合数据失败 ： "+e.getMessage());
-                        }
                     }
                 }
             } else {
@@ -264,8 +247,22 @@ public class MediaMuxerThread extends Thread {
                 }
             }
         }
-        readyStop();
         Log.e(TAG, "混合器退出。。。");
+    }
+
+    private synchronized void writeSampleData(MuxerData data) {
+        int track;
+        if (data.trackIndex == TRACK_VIDEO) {
+            track = videoTrackIndex;
+        } else {
+            track = audioTrackIndex;
+        }
+        Log.e(TAG, "写入混合数据 "+data.bufferInfo.size+", dataTrackIndex : "+data.trackIndex);
+        try {
+            mediaMuxer.writeSampleData(track, data.byteBuffer, data.bufferInfo);
+        } catch (Exception e) {
+            Log.e(TAG, "写入混合数据失败 ： "+e.getMessage());
+        }
     }
 
     private void restart() {
@@ -337,10 +334,7 @@ public class MediaMuxerThread extends Thread {
                 e.printStackTrace();
             }
         }
-        isExit = true;
-        synchronized (lock) {
-            lock.notify();
-        }
+        readyStop();
     }
 
     /**
