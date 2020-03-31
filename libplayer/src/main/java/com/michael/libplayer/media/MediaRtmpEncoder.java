@@ -6,6 +6,8 @@ import android.util.Log;
 import com.michael.libplayer.activity.PlayerCameraRecordMuxerActivity;
 
 import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class MediaRtmpEncoder {
@@ -22,10 +24,11 @@ public class MediaRtmpEncoder {
     private volatile boolean audioWorking;
 
     public MediaRtmpEncoder() {
-        videoThread = new Thread() {
+        videoThread = new Thread("Thread-videoRtmpEncoder") {
             @Override
             public void run() {
                 while (videoWorking && !Thread.interrupted()) {
+                    Log.i(TAG, Thread.currentThread().getId()+"-"+Thread.currentThread().getName());
                     try {
                         MediaMuxerThread.MuxerData muxerData = videoQueue.take();
                         encodeAvcFrame(muxerData.getByteBuffer(), muxerData.getBufferInfo());
@@ -36,10 +39,11 @@ public class MediaRtmpEncoder {
                 }
             }
         };
-        audioThread = new Thread() {
+        audioThread = new Thread("Audio-audioRtmpEncoder") {
             @Override
             public void run() {
                 while (audioWorking && !Thread.interrupted()) {
+                    Log.i(TAG, Thread.currentThread().getId()+"-"+Thread.currentThread().getName());
                     try {
                         MediaMuxerThread.MuxerData muxerData = audioQueue.take();
                         encodeAacFrame(muxerData.getByteBuffer(), muxerData.getBufferInfo());
@@ -61,12 +65,16 @@ public class MediaRtmpEncoder {
     }
 
     private void encodeAvcFrame(ByteBuffer bb, final MediaCodec.BufferInfo vBufferInfo) {
-        int offset = 4;
-        if (bb.get(2) == 0x01) {
-            offset = 3;
-        }
-        int type = bb.get(offset) & 0x1f;
-        Log.i(TAG, "hooory!   video type= "+type);
+//        int offset = 4;
+//        if (bb.get(2) == 0x01) {
+//            offset = 3;
+//        }
+//        int type = bb.get(offset) & 0x1f;
+        /*FloatBuffer floatBuffer = bb.asFloatBuffer();
+        float[] floats = new float[floatBuffer.limit()];
+        floatBuffer.get(floats);
+        Log.d(TAG, "bb=" + Arrays.toString(floats));*/
+//        Log.i(TAG, "hooory!   video type= "+type);
     }
 
     private void encodeAacFrame(ByteBuffer bb, final MediaCodec.BufferInfo vBufferInfo) {

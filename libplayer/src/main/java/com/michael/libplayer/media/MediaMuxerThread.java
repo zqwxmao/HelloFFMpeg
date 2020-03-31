@@ -225,6 +225,12 @@ public class MediaMuxerThread extends Thread {
                 if (muxed && isMuxerTrackAddDone()) {
                     writeSampleData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, byteBuffer, bufferInfo));
                 } else if (!muxed && callback != null) {
+                    int offset = 4;
+                    if (byteBuffer.get(2) == 0x01) {
+                        offset = 3;
+                    }
+                    int type = byteBuffer.get(offset) & 0x1f;
+                    Log.i(TAG, "hooory!   video type= "+type);
                     callback.onWriteSampleData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, byteBuffer, bufferInfo));
                 }
             }
@@ -256,29 +262,31 @@ public class MediaMuxerThread extends Thread {
 
         //
         initMuxer();
-        while (!isExit) {
-            if (isMuxerTrackAddDone()) {
-                if (muxerDatas.isEmpty()) {
-                    synchronized (lock) {
-                        isExit = true;
-                        Log.e(TAG, "等待混合数据");
+        if (muxed) {
+            while (!isExit) {
+                if (isMuxerTrackAddDone()) {
+                    if (muxerDatas.isEmpty()) {
+                        synchronized (lock) {
+                            isExit = true;
+                            Log.e(TAG, "等待混合数据");
+                        }
+                    } else {
+                        if (fileSwapHelper.requestSwapFile()) {
+                            //需要切换文件
+                            String nextFileName = fileSwapHelper.getNextFileName();
+                            Log.e(TAG, "正在重启混合器... " + nextFileName);
+                            restart(nextFileName);
+                        }
                     }
                 } else {
-                    if (fileSwapHelper.requestSwapFile()) {
-                        //需要切换文件
-                        String nextFileName = fileSwapHelper.getNextFileName();
-                        Log.e(TAG, "正在重启混合器... "+nextFileName);
-                        restart(nextFileName);
-                    }
-                }
-            } else {
-                synchronized (lock) {
-                    try {
-                        Log.e(TAG, "等待音视轨添加");
-                        lock.wait();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        Log.e(TAG, "addTrack异常 : "+e.getMessage());
+                    synchronized (lock) {
+                        try {
+                            Log.e(TAG, "等待音视轨添加");
+                            lock.wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                            Log.e(TAG, "addTrack异常 : " + e.getMessage());
+                        }
                     }
                 }
             }
