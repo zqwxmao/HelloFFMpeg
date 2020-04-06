@@ -286,7 +286,7 @@ RTMPPacket *packet = NULL;
  */
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_wangheart_rtmpfile_rtmp_RtmpHandle_connect(JNIEnv *env, jobject instance, jstring url_) {
+Java_com_michael_libplayer_ffmpeg_FFMpegHandle_connect(JNIEnv *env, jobject instance, jstring url_, jint min_width, jint max_width, jint time_out) {
     const char *url = env->GetStringUTFChars(url_, 0);
     int len = strlen(url);
 
@@ -301,7 +301,7 @@ Java_com_wangheart_rtmpfile_rtmp_RtmpHandle_connect(JNIEnv *env, jobject instanc
     rtmp = RTMP_Alloc();
     RTMP_Init(rtmp);
     //set connection timeout,default 30s
-    rtmp->Link.timeout = 5;
+    rtmp->Link.timeout = time_out;
 //    if (!RTMP_SetupURL(rtmp, "rtmp://192.168.31.127/live")) {
     if (!RTMP_SetupURL(rtmp, rtmpUrl)) {
         RTMP_Log(RTMP_LOGERROR, "SetupURL Err\n");
@@ -408,7 +408,7 @@ Java_com_wangheart_rtmpfile_rtmp_RtmpHandle_push(JNIEnv *env, jobject instance, 
  */
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_wangheart_rtmpfile_rtmp_RtmpHandle_close(JNIEnv *env, jobject instance) {
+Java_com_michael_libplayer_ffmpeg_FFMpegHandle_close(JNIEnv *env, jobject instance) {
     // TODO
     if (rtmp != NULL) {
         RTMP_Close(rtmp);

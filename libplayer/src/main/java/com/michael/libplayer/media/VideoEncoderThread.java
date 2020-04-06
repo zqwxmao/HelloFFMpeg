@@ -14,8 +14,9 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.Vector;
+import java.util.concurrent.LinkedBlockingQueue;
 
-public class VideoEncoderThread extends Thread {
+public class VideoEncoderThread extends AbstractMediaEncoderThread {
 
     private static final String TAG = PlayerCameraRecordMuxerActivity.TAG + VideoEncoderThread.class.getSimpleName();
     public static int IMAGE_HEIGHT = 720;
@@ -34,7 +35,7 @@ public class VideoEncoderThread extends Thread {
     private int height;
 
     //存储每一帧的数据Vector自增数组
-    private Vector<byte[]> frameBytes;
+    private LinkedBlockingQueue<byte[]> frameBytes;
     private byte[] frameData;
 
     private final Object lock = new Object();
@@ -52,10 +53,11 @@ public class VideoEncoderThread extends Thread {
 
     private ICallback callback;
 
-    public VideoEncoderThread(int width, int height) {
+    public VideoEncoderThread(int width, int height, boolean isMuxed) {
+        super(isMuxed);
         this.width = width;
         this.height = height;
-        this.frameBytes = new Vector<byte[]>();
+        this.frameBytes = new LinkedBlockingQueue<byte[]>();
         prepare();
     }
 
@@ -196,10 +198,13 @@ public class VideoEncoderThread extends Thread {
                     }
                 }
             } else if (!frameBytes.isEmpty()) {
-                byte[] bytes = this.frameBytes.remove(0);
-                Log.e(TAG, "解码视频数据： "+ (bytes!=null ? bytes.length : "null"));
                 try {
+                    byte[] bytes = this.frameBytes.take();
+                    Log.e(TAG, "解码视频数据： "+ (bytes!=null ? bytes.length : "null"));
                     encodeFrame(bytes);
+                } catch (InterruptedException e) {
+                    Log.e(TAG, "缓存读取视频数据出错： "+e.getMessage());
+                    e.printStackTrace();
                 } catch (Exception e) {
                     Log.e(TAG, "解码视频数据出错： "+e.getMessage());
                     e.printStackTrace();
@@ -271,7 +276,8 @@ public class VideoEncoderThread extends Thread {
                     Log.e(TAG, "encoderOutputBuffer "+outputBufferIndex + "was null ");
                     continue;
                 }
-                if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
+
+                if (super.isMuxed && (bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
                     MediaFormat format = videoCodec.getOutputFormat();
                     format.setByteBuffer("csd-0",outputBuffer);
                     bufferInfo.size = 0;

@@ -26,4 +26,6 @@ public class FFMpegHandle {
 
     public native void pushRtmpFile(String path);
     public native void pushFFMpegFile(String rtmpURL, String filePath);
+    public native int connect(String url, int minWidth, int maxWidth, int timeOut);
+    public native int close();
 }

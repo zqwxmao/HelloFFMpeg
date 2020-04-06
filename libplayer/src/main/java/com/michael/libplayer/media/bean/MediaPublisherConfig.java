@@ -78,5 +78,41 @@ public class MediaPublisherConfig {
             this.bitrate = bitrate;
             return this;
         }
+
+        public MediaPublisherConfig build() {
+            return new MediaPublisherConfig(fps, minWidth, maxWidth, timeOut, publishUrl, audioFormat, channelConfig, bitrate);
+        }
+    }
+
+    public int getFps() {
+        return fps;
+    }
+
+    public int getMinWidth() {
+        return minWidth;
+    }
+
+    public int getMaxWidth() {
+        return maxWidth;
+    }
+
+    public int getTimeOut() {
+        return timeOut;
+    }
+
+    public String getPublishUrl() {
+        return publishUrl;
+    }
+
+    public int getAudioFormat() {
+        return audioFormat;
+    }
+
+    public int getChannelConfig() {
+        return channelConfig;
+    }
+
+    public int getBitrate() {
+        return bitrate;
     }
 }

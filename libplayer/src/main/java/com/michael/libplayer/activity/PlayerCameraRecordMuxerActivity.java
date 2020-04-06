@@ -3,21 +3,21 @@ package com.michael.libplayer.activity;
 import android.Manifest;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
+import android.media.AudioFormat;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
-import android.widget.TextView;
 
 import com.michael.libplayer.R;
 import com.michael.libplayer.base.BaseActivity;
 import com.michael.libplayer.media.MediaMuxerThread;
 import com.michael.libplayer.media.MediaRtmpEncoder;
 import com.michael.libplayer.media.VideoEncoderThread;
+import com.michael.libplayer.media.bean.MediaPublisherConfig;
 import com.michael.libplayer.util.CameraUtils;
-import com.michael.libplayer.util.YUVUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -48,6 +48,17 @@ public class PlayerCameraRecordMuxerActivity extends BaseActivity implements Sur
 
         surfaceHolder = surfaceView.getHolder();
         surfaceHolder.addCallback(this);
+
+        mediaRtmpEncoder = new MediaRtmpEncoder(new MediaPublisherConfig.Builder()
+                .setFps(30)
+                .setMinWidth(320)
+                .setMaxWidth(720)
+                .setPublishUrl("rtmp://118.24.120.128:1935/myapp/test")
+                .setAudioFormat(AudioFormat.ENCODING_PCM_16BIT)
+                .setChannelConfig(AudioFormat.CHANNEL_IN_STEREO)
+                .build()
+        );
+        mediaRtmpEncoder.init();
     }
 
     @Override
@@ -149,29 +160,23 @@ public class PlayerCameraRecordMuxerActivity extends BaseActivity implements Sur
                 v.setTag("start");
                 btnStartPublishRtmp.setText(R.string.player_start_publish_rtmp);
                 stopCamera();
-                MediaMuxerThread.stopMuxer();
-                mediaRtmpEncoder.stop();
+                stop();
             } else {
                 v.setTag("stop");
                 btnStartPublishRtmp.setText(R.string.player_stop_publish_rtmp);
                 startCamera();
-                if (mediaRtmpEncoder == null){
-                    mediaRtmpEncoder = new MediaRtmpEncoder();
-                }
-                MediaMuxerThread.startMuxer(false, new MediaMuxerThread.ICallback() {
-                    @Override
-                    public void onWriteSampleData(MediaMuxerThread.MuxerData muxerData) {
-                        if (muxerData != null) {
-                            if (muxerData.getTrackIndex() == MediaMuxerThread.TRACK_VIDEO) {
-                                mediaRtmpEncoder.addVideoData(muxerData);
-                            } else if (muxerData.getTrackIndex() == MediaMuxerThread.TRACK_AUDIO) {
-                                mediaRtmpEncoder.addAudioData(muxerData);
-                            }
-                        }
-                    }
-                });
-                mediaRtmpEncoder.start();
+                start();
             }
         }
+    }
+
+    private void start() {
+        mediaRtmpEncoder.startGather();
+        mediaRtmpEncoder.startPublish();
+    }
+
+    private void stop() {
+        mediaRtmpEncoder.stopGather();
+        mediaRtmpEncoder.stopPublish();
     }
 }
