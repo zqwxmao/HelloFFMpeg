@@ -193,7 +193,7 @@ public class MediaMuxerThread extends Thread {
     private void initMuxer() {
         muxerDatas = new Vector<>();
         fileSwapHelper = new FileUtils();
-        audioEncoderThread = new AudioEncoderThread();
+        audioEncoderThread = new AudioEncoderThread(this.muxed);
         audioEncoderThread.setCallback(new VideoEncoderThread.ICallback() {
             @Override
             public void onInfoFormatChanged(MediaFormat newFormat) {
@@ -211,7 +211,7 @@ public class MediaMuxerThread extends Thread {
                 }
             }
         });
-        videoEncoderThread = new VideoEncoderThread(VideoEncoderThread.IMAGE_WIDTH, VideoEncoderThread.IMAGE_HEIGHT);
+        videoEncoderThread = new VideoEncoderThread(VideoEncoderThread.IMAGE_WIDTH, VideoEncoderThread.IMAGE_HEIGHT, this.muxed);
         videoEncoderThread.setCallback(new VideoEncoderThread.ICallback() {
             @Override
             public void onInfoFormatChanged(MediaFormat newFormat) {
@@ -225,12 +225,6 @@ public class MediaMuxerThread extends Thread {
                 if (muxed && isMuxerTrackAddDone()) {
                     writeSampleData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, byteBuffer, bufferInfo));
                 } else if (!muxed && callback != null) {
-                    int offset = 4;
-                    if (byteBuffer.get(2) == 0x01) {
-                        offset = 3;
-                    }
-                    int type = byteBuffer.get(offset) & 0x1f;
-                    Log.i(TAG, "hooory!   video type= "+type);
                     callback.onWriteSampleData(new MediaMuxerThread.MuxerData(MediaMuxerThread.TRACK_VIDEO, byteBuffer, bufferInfo));
                 }
             }

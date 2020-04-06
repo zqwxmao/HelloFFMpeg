@@ -16,8 +16,9 @@ import com.michael.libplayer.activity.PlayerCameraRecordMuxerActivity;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
+import java.util.concurrent.LinkedBlockingQueue;
 
-public class AudioEncoderThread extends Thread {
+public class AudioEncoderThread extends AbstractMediaEncoderThread {
 
     private static final String TAG = PlayerCameraRecordMuxerActivity.TAG + AudioEncoderThread.class.getSimpleName();
 
@@ -50,8 +51,10 @@ public class AudioEncoderThread extends Thread {
     private MediaFormat audioFormat;
 
     private VideoEncoderThread.ICallback callback;
+    private LinkedBlockingQueue<byte[]> audioFrames = new LinkedBlockingQueue<>();
 
-    public AudioEncoderThread() {
+    public AudioEncoderThread(boolean isMuxed) {
+        super(isMuxed);
         this.bufferInfo = new MediaCodec.BufferInfo();
         prepare();
     }
@@ -273,7 +276,7 @@ public class AudioEncoderThread extends Thread {
                 Log.e(TAG, "encoderStatus < 0");
             } else {
                 final ByteBuffer encodedData = encoderOutputBuffers[encoderStatus];
-                if ( (bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
+                if (super.isMuxed && (bufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
                     bufferInfo.size = 0;
                     Log.d(TAG, "drain:BUFFER_FLAG_CODEC_CONFIG");
                 }
