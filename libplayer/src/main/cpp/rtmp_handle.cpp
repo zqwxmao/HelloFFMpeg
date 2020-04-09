@@ -430,32 +430,40 @@ JNIEXPORT jint JNICALL
 Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendVideoSpec(JNIEnv *env, jobject instance,
                                                              jbyteArray sps, jint sps_len, jbyteArray pps, jint pps_len,
                                                              jlong time_stamps) {
-//    RTMPPacket *packet = (RTMPPacket *)malloc(RTMP_HEAD_SIZE + 1024);
-//    memset(packet, 0, RTMP_HEAD_SIZE);
-//    packet->m_body = (char *)packet;
-//    uint8_t *body = (uint8_t *)packet->m_body;
-//
-//    int i = 0;
-//    body[i++] = 0x17;
+    RTMPPacket *packet = (RTMPPacket *)malloc(RTMP_HEAD_SIZE + 1024);
+    memset(packet, 0, RTMP_HEAD_SIZE);
+    packet->m_body = (char *)packet;
+    uint8_t *body = (uint8_t *)packet->m_body;
+
+    int i = 0;
+    body[i++] = 0x17;//1byte 前4位 FrameType 后4位CodecId
+    body[i++] = 0x00;//CodecId是 7 AVC的话， VideoTagHeader会多出4个字节 AvcPacketType(1Byte)和CompositionTime(3Byte)
+    body[i++] = 0x00;
+    body[i++] = 0x00;
+    body[i++] = 0x00;
+
+
+    free(packet);
+    return 0;
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
 Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendVideoData(JNIEnv *env, jobject instance,
                                                              jbyteArray frame, jint frame_len, jlong time_stamps) {
-
+    return 0;
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
 Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendAudioSpec(JNIEnv *env, jobject instance,
                                                              jbyteArray aac_spec, jint aac_spec_len) {
-
+    return 0;
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
 Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendAudioData(JNIEnv *env, jobject instance,
                                                              jbyteArray aac_data, jint aac_data_len, jlong time_stamps) {
-
+    return 0;
 }
