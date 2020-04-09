@@ -430,10 +430,15 @@ JNIEXPORT jint JNICALL
 Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendVideoSpec(JNIEnv *env, jobject instance,
                                                              jbyteArray sps, jint sps_len, jbyteArray pps, jint pps_len,
                                                              jlong time_stamps) {
+    jbyte *sps_ = env -> GetByteArrayElements(sps, NULL);
+    jbyte *pps_ = env -> GetByteArrayElements(pps, NULL);
+
     RTMPPacket *packet = (RTMPPacket *)malloc(RTMP_HEAD_SIZE + 1024);
     memset(packet, 0, RTMP_HEAD_SIZE);
     packet->m_body = (char *)packet;
     uint8_t *body = (uint8_t *)packet->m_body;
+    uint8_t *sps_c = (uint8_t *) sps_;
+    uint8_t *pps_c = (uint8_t *) pps_;
 
     int i = 0;
     body[i++] = 0x17;//1byte 前4位 FrameType 后4位CodecId
@@ -442,7 +447,22 @@ Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendVideoSpec(JNIEnv *env, jobjec
     body[i++] = 0x00;
     body[i++] = 0x00;
 
+    //AVCDecoderConfigurationRecord
+    body[i++] = 0x01;   //configurationVersion 1
+    body[i++] = sps_c[1];   //AVCProfileIndication
+    body[i++] = sps_c[2];   //profile_compatibility
+    body[i++] = sps_c[3];   //AVCLevelIndication
+    body[i++] = 0xFF;   //lenghSizeMinusOne
 
+    //SPS
+    body[i++] = 0xE1;   //numOf SPS
+    body[i++] = (sps_len >> 8) & 0xFF;  //sps length
+
+
+    //PPS
+
+    env -> ReleaseByteArrayElements(sps, sps_, 0);
+    env -> ReleaseByteArrayElements(pps, pps_, 0);
     free(packet);
     return 0;
 }
