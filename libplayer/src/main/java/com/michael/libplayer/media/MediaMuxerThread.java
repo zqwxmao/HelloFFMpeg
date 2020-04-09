@@ -256,6 +256,7 @@ public class MediaMuxerThread extends Thread {
 
         //
         initMuxer();
+        Log.e(TAG, "hashCode : "+hashCode()+", tid : "+Thread.currentThread().getId());
         if (muxed) {
             while (!isExit) {
                 if (isMuxerTrackAddDone()) {
@@ -359,19 +360,9 @@ public class MediaMuxerThread extends Thread {
     private void exit() {
         if (videoEncoderThread != null) {
             videoEncoderThread.exit();
-            try {
-                videoEncoderThread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
         if (audioEncoderThread != null) {
             audioEncoderThread.exit();
-            try {
-                audioEncoderThread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
         if (muxed) {
             readyStop();

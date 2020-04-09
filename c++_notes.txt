@@ -1,0 +1,8 @@
+1.memset:
+C 库函数 void *memset(void *str, int c, size_t n) 复制字符 c（一个无符号字符）到参数 str 所指向的字符串的前 n 个字符。
+
+2.malloc:
+C 库函数 void *malloc(size_t size) 分配所需的内存空间，并返回一个指向它的指针。
+size -- 内存块的大小，以字节为单位。
+
+3.

@@ -9,6 +9,7 @@
 #include <string>
 #include<android/log.h>
 #include <exception>
+#include "rtmp_handle.h"
 
 //定义日志宏变量
 #define logw(content)   __android_log_write(ANDROID_LOG_WARN,"eric",content)
@@ -31,6 +32,7 @@ extern "C" {
 }
 
 #include <iostream>
+#define RTMP_HEAD_SIZE (sizeof(RTMPPacket) + RTMP_MAX_HEADER_SIZE)
 
 using namespace std;
 
@@ -421,4 +423,39 @@ Java_com_michael_libplayer_ffmpeg_FFMpegHandle_close(JNIEnv *env, jobject instan
         packet = NULL;
     }
     return 0;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendVideoSpec(JNIEnv *env, jobject instance,
+                                                             jbyteArray sps, jint sps_len, jbyteArray pps, jint pps_len,
+                                                             jlong time_stamps) {
+//    RTMPPacket *packet = (RTMPPacket *)malloc(RTMP_HEAD_SIZE + 1024);
+//    memset(packet, 0, RTMP_HEAD_SIZE);
+//    packet->m_body = (char *)packet;
+//    uint8_t *body = (uint8_t *)packet->m_body;
+//
+//    int i = 0;
+//    body[i++] = 0x17;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendVideoData(JNIEnv *env, jobject instance,
+                                                             jbyteArray frame, jint frame_len, jlong time_stamps) {
+
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendAudioSpec(JNIEnv *env, jobject instance,
+                                                             jbyteArray aac_spec, jint aac_spec_len) {
+
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendAudioData(JNIEnv *env, jobject instance,
+                                                             jbyteArray aac_data, jint aac_data_len, jlong time_stamps) {
+
 }

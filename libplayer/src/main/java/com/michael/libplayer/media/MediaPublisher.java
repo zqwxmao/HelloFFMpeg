@@ -27,18 +27,18 @@ public class MediaPublisher {
     }
 
     public void sendVideoSpec(byte[] sps, byte[] pps, long timeStamps) {
-
+        FFMpegHandle.getInstance().sendVideoSpec(sps, sps.length, pps, pps.length, timeStamps);
     }
 
     public void sendVideoData(byte[] frame, long timeStamps) {
-
+        FFMpegHandle.getInstance().sendVideoData(frame, frame.length, timeStamps);
     }
 
     public void sendAudioSpec(byte[] aacSpec) {
-
+        FFMpegHandle.getInstance().sendAudioSpec(aacSpec, aacSpec.length);
     }
 
     public void sendAudioData(byte[] aacData, long timeStamps) {
-
+        FFMpegHandle.getInstance().sendAudioData(aacData, aacData.length, timeStamps);
     }
 }

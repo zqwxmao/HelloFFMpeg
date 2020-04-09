@@ -28,4 +28,8 @@ public class FFMpegHandle {
     public native void pushFFMpegFile(String rtmpURL, String filePath);
     public native int connect(String url, int minWidth, int maxWidth, int timeOut);
     public native int close();
+    public native int sendVideoSpec(byte[] sps, int spsLen, byte[] pps, int ppsLen, long timeStamps);
+    public native int sendVideoData(byte[] frame, int frameLen, long timeStamps);
+    public native int sendAudioSpec(byte[] aacSpec, int aacSpecLen);
+    public native int sendAudioData(byte[] aacData, int aacDataLen, long timeStamps);
 }
