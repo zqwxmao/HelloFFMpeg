@@ -454,16 +454,38 @@ Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendVideoSpec(JNIEnv *env, jobjec
     body[i++] = sps_c[3];   //AVCLevelIndication
     body[i++] = 0xFF;   //lenghSizeMinusOne
 
+    const char *sps_c1 = (char *)(sps_c);
+    loge(sps_c1);
+
     //SPS
     body[i++] = 0xE1;   //numOf SPS
     body[i++] = (sps_len >> 8) & 0xFF;  //sps length
-
+    body[i++] = sps_len & 0xFF;     //sps NALUnits
+    memcpy(&body[i], sps_c, sps_len);
+    i += sps_len;
 
     //PPS
+    body[i++] = 0x01;   //numOf PPS
+    body[i++] = (pps_len >> 8) & 0xFF;  //pps length
+    body[i++] = pps_len & 0xFF;     //pps
+    memcpy(&body[i], pps_c, pps_len);
+    i += pps_len;
+
+    packet -> m_packetType = RTMP_PACKET_TYPE_VIDEO;
+    packet -> m_nBodySize = i;
+    packet -> m_nChannel = 0x04;    //channelId video audio
+    packet -> m_nTimeStamp = 0;
+    packet -> m_hasAbsTimestamp = 0;
+    packet -> m_headerType = RTMP_PACKET_SIZE_MEDIUM;
+    packet -> m_nInfoField2 = rtmp -> m_stream_id;
+
+    if(RTMP_IsConnected(rtmp)) {
+        RTMP_SendPacket(rtmp, packet, TRUE);
+    }
+    free(packet);
 
     env -> ReleaseByteArrayElements(sps, sps_, 0);
     env -> ReleaseByteArrayElements(pps, pps_, 0);
-    free(packet);
     return 0;
 }
 
@@ -471,6 +493,13 @@ extern "C"
 JNIEXPORT jint JNICALL
 Java_com_michael_libplayer_ffmpeg_FFMpegHandle_sendVideoData(JNIEnv *env, jobject instance,
                                                              jbyteArray frame, jint frame_len, jlong time_stamps) {
+
+    jbyte *jframe = env -> GetByteArrayElements(frame, NULL);
+    uint8_t *jframe_c = (uint8_t*) jframe;
+
+
+
+    env -> ReleaseByteArrayElements(frame, jframe, 0);
     return 0;
 }
 

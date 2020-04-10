@@ -5,4 +5,5 @@ C 库函数 void *memset(void *str, int c, size_t n) 复制字符 c（一个无�
 C 库函数 void *malloc(size_t size) 分配所需的内存空间，并返回一个指向它的指针。
 size -- 内存块的大小，以字节为单位。
 
-3.
+3.memcpy:
+C 库函数 void *memcpy(void *str1, const void *str2, size_t n) 从存储区 str2 复制 n 个字符到存储区 str1。
