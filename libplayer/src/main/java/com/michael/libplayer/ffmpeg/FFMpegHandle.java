@@ -1,5 +1,7 @@
 package com.michael.libplayer.ffmpeg;
 
+import android.view.Surface;
+
 /**
  * @Author: zhangqiaowenxiang
  * @Time: 2019/11/18
@@ -26,6 +28,7 @@ public class FFMpegHandle {
 
     public native void pushRtmpFile(String path);
     public native void pushFFMpegFile(String rtmpURL, String filePath);
+    public native void renderFFmpeg(String path, Surface surface, int version);
     public native int connect(String url, int minWidth, int maxWidth, int timeOut);
     public native int close();
     public native int sendVideoSpec(byte[] sps, int spsLen, byte[] pps, int ppsLen, long timeStamps);

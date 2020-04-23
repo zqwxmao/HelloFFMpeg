@@ -14,6 +14,7 @@ import com.michael.libplayer.R;
 import com.michael.libplayer.ffmpeg.FFMpegHandle;
 import com.michael.libplayer.util.FileUtils;
 import com.michael.libplayer.util.pool.ThreadPoolManager;
+import com.michael.libplayer.view.FFMPegVideoView;
 
 import java.io.File;
 import java.net.URLConnection;
@@ -25,6 +26,7 @@ public class PlayerFFMPegPushFileActivity extends AppCompatActivity {
 
     private ProgressBar pb;
     private ListView lv;
+    private FFMPegVideoView ffmPegVideoView;
 
     private List<String> fileNames = new LinkedList<>();
     private List<String> filePaths = new LinkedList<>();
@@ -41,6 +43,23 @@ public class PlayerFFMPegPushFileActivity extends AppCompatActivity {
     private void initView() {
         this.pb = findViewById(R.id.player_pb);
         this.lv = findViewById(R.id.player_lv);
+        this.ffmPegVideoView = findViewById(R.id.ffmpeg_video_view);
+        this.ffmPegVideoView.setCallback(new FFMPegVideoView.ICallback() {
+            @Override
+            public void onFinish() {
+                runOnUiThread(() -> ffmPegVideoView.setVisibility(View.GONE));
+            }
+
+            @Override
+            public void onResume() {
+
+            }
+
+            @Override
+            public void onPause() {
+
+            }
+        });
     }
 
     private void initData() {
@@ -92,6 +111,11 @@ public class PlayerFFMPegPushFileActivity extends AppCompatActivity {
                             pb.setVisibility(View.GONE);
                         });
                     });
+                });
+                lv.setOnItemLongClickListener((parent, view, position, id) -> {
+                    this.ffmPegVideoView.setVisibility(View.VISIBLE);
+                    this.ffmPegVideoView.player(filePaths.get(position));
+                    return false;
                 });
             });
         });
